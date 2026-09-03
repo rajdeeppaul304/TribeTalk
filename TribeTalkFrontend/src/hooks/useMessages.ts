@@ -43,36 +43,42 @@ export function useMessages(channelId: string | null) {
   // ============================================
 
   const sendMessage = useCallback((content: string) => {
-    if (!channelId || !user) return
+    console.log("user object:", user)
+  const senderId = user?._id || user?.id
+  if (!channelId || !senderId) return
 
-    const clientId = `temp-${Date.now()}-${Math.random()}`
 
-    // Optimistic update
-    const optimisticMessage: Message = {
-      id: clientId,
-      content,
-      senderId: user._id,
-      senderUsername: user.username,
-      senderAvatar: user.avatar,
-      channelId,
-      sequence: Date.now(), // Temporary sequence
-      timestamp: new Date().toISOString(),
-      isEdited: false,
-      isPending: true,
-      clientId,
-    }
+  const clientId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+  // const nowIso = new Date().toISOString()
+  const now = new Date().toISOString()
+  // Match the exact Message interface from types.ts
+  const optimisticMessage: Message = {
+  id: clientId,
+  content,
+  senderId: String(user._id || user.id),
+  senderUsername: user.username,
+  senderAvatar: user.avatar,
+  channelId,
+  sequence: Date.now(),
+  timestamp: now,
+  createdAt: now, // in case any formatter checks createdAt
+  isEdited: false,
+  isPending: true,
+  clientId,
+}
 
-    dispatch(addMessage({ channelId, message: optimisticMessage }))
+  dispatch(addMessage({ channelId, message: optimisticMessage }))
 
-    // Send to server
-    socketGateway.sendMessage({ channelId, content, clientId })
+  socketGateway.sendMessage({ channelId, content, clientId })
 
-    // Stop typing indicator
-    if (isTypingRef.current) {
-      socketGateway.stopTyping(channelId)
-      isTypingRef.current = false
-    }
-  }, [channelId, user, dispatch])
+  if (isTypingRef.current) {
+    socketGateway.stopTyping(channelId)
+    isTypingRef.current = false
+  }
+}, [channelId, user, dispatch])
+
+
+
 
   // ============================================
   // EDIT MESSAGE

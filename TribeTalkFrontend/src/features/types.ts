@@ -43,6 +43,7 @@ export interface Message {
   channelId: string
   sequence: number              // For ordering
   timestamp: string             // ISO string
+  createdAt?: string            // 👈 Add this line (ISO string from Mongo)
   isEdited: boolean
   editedAt?: string             // ISO string
   isSystemMessage?: boolean
@@ -51,7 +52,6 @@ export interface Message {
   isPending?: boolean           // Local-only flag for optimistic updates
   isFailed?: boolean            // Local-only flag for failed sends
 }
-
 export interface MessageState {
   messagesByChannel: Record<string, Message[]>
   editingMessageId: string | null  // Track which message is being edited

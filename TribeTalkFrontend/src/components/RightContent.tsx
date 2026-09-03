@@ -13,7 +13,7 @@ const RightContent = () => {
   const [messageInput, setMessageInput] = useState("")
   const [editContent, setEditContent] = useState("")
   const [isLoadingOlder, setIsLoadingOlder] = useState(false)
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -71,11 +71,11 @@ const RightContent = () => {
 
     if (container.scrollTop === 0 && messages.length > 0) {
       setIsLoadingOlder(true)
-      
+
       const oldScrollHeight = container.scrollHeight
-      
+
       const result = await loadOlderMessages()
-      
+
       setIsLoadingOlder(false)
 
       if (result && result.count > 0) {
@@ -94,7 +94,7 @@ const RightContent = () => {
 
     sendMessage(messageInput.trim())
     setMessageInput("")
-    
+
     // Mark channel as read after sending (you've seen everything up to your message)
     markAsRead()
   }
@@ -160,6 +160,7 @@ const RightContent = () => {
               key={msg.id}
               message={msg}
               isOwn={msg.senderId === user?._id}
+              currentUsername={user?.username}
               isEditing={editingMessageId === msg.id}
               editContent={editContent}
               onEditContentChange={setEditContent}
@@ -212,6 +213,7 @@ const RightContent = () => {
 interface MessageItemProps {
   message: Message
   isOwn: boolean
+  currentUsername?: string
   isEditing: boolean
   editContent: string
   onEditContentChange: (content: string) => void
@@ -224,6 +226,7 @@ interface MessageItemProps {
 const MessageItem = ({
   message,
   isOwn,
+  currentUsername,
   isEditing,
   editContent,
   onEditContentChange,
@@ -233,9 +236,24 @@ const MessageItem = ({
   onDelete,
 }: MessageItemProps) => {
   const [showActions, setShowActions] = useState(false)
+  const [showSending, setShowSending] = useState(false)
 
-  const formatTime = (timestamp: string) => {
+  // Only show "Sending..." if the message is still pending after 400ms.
+  // The message itself still renders instantly (optimistic UI) — this
+  // just delays the label so fast round-trips don't flash it.
+  useEffect(() => {
+    if (!message.isPending) {
+      setShowSending(false)
+      return
+    }
+    const timer = setTimeout(() => setShowSending(true), 400)
+    return () => clearTimeout(timer)
+  }, [message.isPending])
+
+  const formatTime = (timestamp?: string) => {
+    if (!timestamp) return ""
     const date = new Date(timestamp)
+    if (isNaN(date.getTime())) return ""
     return date.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
@@ -284,26 +302,21 @@ const MessageItem = ({
   return (
     <div
       className={`bg-gray-800 p-3 rounded relative ${
-        message.isPending ? "opacity-50" : ""
-      } ${message.isFailed ? "border-2 border-red-500" : ""}`}
+        message.isFailed ? "border-2 border-red-500" : ""
+      }`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       <div className="flex items-baseline gap-2">
         <span className={`font-semibold ${isOwn ? "text-green-400" : "text-blue-400"}`}>
-          {message.senderUsername || `User ${message.senderId}`}
+          {message.senderUsername ||
+            (isOwn ? currentUsername : `User ${message.senderId?.slice(-4)}`)}
         </span>
         <span className="text-xs text-gray-500">
-          {formatTime(message.timestamp)}
+          {formatTime(message.timestamp || (message as any).createdAt)}
         </span>
-        {message.isEdited && (
-          <span className="text-xs text-gray-500 italic">(edited)</span>
-        )}
-        {message.isPending && (
+        {showSending && (
           <span className="text-xs text-yellow-500">Sending...</span>
-        )}
-        {message.isFailed && (
-          <span className="text-xs text-red-500">Failed to send</span>
         )}
       </div>
 

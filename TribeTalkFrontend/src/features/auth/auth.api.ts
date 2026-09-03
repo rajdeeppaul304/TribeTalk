@@ -36,8 +36,9 @@ export const authApi = createApi({
       }),
     }),
     getCurrentUser: builder.query<AuthResponse["user"], void>({
-      query: () => "/users/current-user",
-    }),
+  query: () => "/users/current-user",
+  transformResponse: (response: { data: AuthResponse["user"] }) => response.data,
+}),
   }),
 })
 
