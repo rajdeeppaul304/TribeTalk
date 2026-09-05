@@ -87,8 +87,16 @@ export const getMessagesSinceSequence = async (channelId, sinceSequence) => {
 /**
  * Find message by ID (active only)
  */
-export const findMessageById = async (messageId) => {
-  return await Message.findOne({ _id: messageId, deletedAt: null });
+// export const findMessageById = async (messageId) => {
+//   return await Message.findOne({ _id: messageId, deletedAt: null });
+// };
+
+export const findMessageByIdAndChannel = async (messageId, channelId) => {
+  return await Message.findOne({ 
+    _id: messageId, 
+    channel: channelId, 
+    deletedAt: null 
+  });
 };
 
 /**

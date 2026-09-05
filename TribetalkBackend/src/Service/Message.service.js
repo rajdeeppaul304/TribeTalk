@@ -101,7 +101,7 @@ export const markAsRead = async (userId, channelId, lastReadMessageId = null) =>
   let targetMessage = null;
 
   if (lastReadMessageId) {
-    targetMessage = await messageRepo.findMessageById(lastReadMessageId);
+    targetMessage = await messageRepo.findMessageByIdAndChannel(lastReadMessageId, channelId);
     if (!targetMessage) {
       throw new ApiError(404, "Target message not found");
     }
@@ -111,6 +111,11 @@ export const markAsRead = async (userId, channelId, lastReadMessageId = null) =>
 
   if (!targetMessage) {
     return null;
+  }
+
+  const currentReadState = await messageRepo.findReadState(userId, channelId);
+  if (currentReadState && currentReadState.lastReadSequence >= targetMessage.sequence) {
+    return currentReadState; // Already read up to or past this sequence, no DB write needed
   }
 
   return await messageRepo.upsertReadState(
