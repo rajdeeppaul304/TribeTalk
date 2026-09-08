@@ -54,8 +54,9 @@ export interface Message {
 }
 export interface MessageState {
   messagesByChannel: Record<string, Message[]>
-  editingMessageId: string | null  // Track which message is being edited
-  typingUsers: Record<string, string[]>  // channelId -> userIds[]
+  editingMessageId: string | null
+  // channelId -> { [userId]: username }
+  typingUsers: Record<string, Record<string, string>>
 }
 
 // NEW: Typing indicator data

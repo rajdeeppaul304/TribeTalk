@@ -34,9 +34,10 @@ export function useMessages(channelId: string | null) {
     state.message.editingMessageId
   )
 
-  const typingUsers = useSelector((state: RootState) =>
-    channelId ? state.message.typingUsers[channelId] : []
-  ) || []
+  const typingUsers = useSelector((state: RootState) => {
+    if (!channelId || !state.message.typingUsers[channelId]) return []
+    return Object.values(state.message.typingUsers[channelId])
+  }) 
 
   // ============================================
   // SEND MESSAGE

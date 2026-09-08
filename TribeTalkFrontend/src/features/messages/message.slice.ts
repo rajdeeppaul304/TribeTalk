@@ -203,13 +203,11 @@ const messageSlice = createSlice({
       state,
       action: PayloadAction<{ channelId: string; userId: string; username: string }>
     ) {
-      const { channelId, username } = action.payload
+      const { channelId, userId, username } = action.payload
       if (!state.typingUsers[channelId]) {
-        state.typingUsers[channelId] = []
+        state.typingUsers[channelId] = {}
       }
-      if (!state.typingUsers[channelId].includes(username)) {
-        state.typingUsers[channelId].push(username)
-      }
+      state.typingUsers[channelId][userId] = username
     },
 
     /**
@@ -219,12 +217,11 @@ const messageSlice = createSlice({
       state,
       action: PayloadAction<{ channelId: string; userId: string }>
     ) {
-      const { channelId } = action.payload
+      const { channelId, userId } = action.payload
       if (state.typingUsers[channelId]) {
-        delete state.typingUsers[channelId]
+        delete state.typingUsers[channelId][userId]
       }
     },
-
     /**
      * Clear all messages for a channel
      */
