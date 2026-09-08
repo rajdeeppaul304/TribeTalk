@@ -1,3 +1,4 @@
+//SessionManager.js
 export default class SessionManager {
   constructor() {
     this.userToSocket = new Map();

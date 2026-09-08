@@ -1,6 +1,8 @@
+//Message.service.js
 import * as messageRepo from "../Repository/Message.repository.js";
 import { checkChannelAccess } from "./Permission.service.js";
 import { ApiError } from "../Utils/ApiError.js";
+import { findUserAccessibleChannelIds } from "../Repository/Server.repository.js";
 
 /**
  * Internal guard for domain-level authorization
@@ -141,14 +143,25 @@ export const getUnreadCount = async (userId, channelId) => {
  * Get map of unread counts for all user channels
  */
 export const getUnreadCountsForUser = async (userId) => {
-  const readStates = await messageRepo.findAllUserReadStates(userId);
+  const [channelIds, readStates] = await Promise.all([
+    findUserAccessibleChannelIds(userId),
+    messageRepo.findAllUserReadStates(userId)
+  ]);
+
+  const readStateMap = new Map();
+  for (const state of readStates) {
+    if (state.channel) {
+      readStateMap.set(state.channel.toString(), state.lastReadSequence || 0);
+    }
+  }
+
   const unreadCounts = {};
 
   await Promise.all(
-    readStates.map(async (state) => {
-      const channelId = state.channel?.toString();
-      if (channelId) {
-        const count = await messageRepo.countUnreadMessages(channelId, state.lastReadSequence || 0);
+    channelIds.map(async (channelId) => {
+      const lastReadSeq = readStateMap.get(channelId) ?? 0;
+      const count = await messageRepo.countUnreadMessages(channelId, lastReadSeq);
+      if (count > 0) {
         unreadCounts[channelId] = count;
       }
     })

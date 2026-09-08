@@ -1,3 +1,4 @@
+//Server.repository.js
 import { Server } from "../Models/Server.model.js";
 import { Channel } from "../Models/Channel.model.js";
 
@@ -54,4 +55,44 @@ export const addMemberToServer = async (serverId, userId) => {
         { $addToSet: { members: userId } },
         { new: true }
     );
+};
+
+
+/**
+ * Find all channel IDs across servers where the user is an owner, moderator, or member
+ */
+export const findUserAccessibleChannelIds = async (userId) => {
+    const servers = await Server.find({
+        $or: [
+            { owner: userId },
+            { moderators: userId },
+            { members: userId }
+        ]
+    })
+        .select("_id")
+        .lean();
+
+    const serverIds = servers.map((s) => s._id);
+    if (serverIds.length === 0) return [];
+
+    const channels = await Channel.find({ server: { $in: serverIds } })
+        .select("_id")
+        .lean();
+
+    return channels.map((c) => c._id.toString());
+};
+
+
+export const findServerIdsForUser = async (userId) => {
+    const servers = await Server.find({
+        $or: [
+            { owner: userId },
+            { moderators: userId },
+            { members: userId }
+        ]
+    })
+        .select("_id")
+        .lean();
+
+    return servers.map((s) => s._id.toString());
 };

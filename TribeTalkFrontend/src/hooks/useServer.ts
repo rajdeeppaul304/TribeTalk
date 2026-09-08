@@ -1,3 +1,4 @@
+//useServer.ts
 import { useDispatch, useSelector } from "react-redux"
 import { setActiveServer } from "../features/servers/server.slice"
 import { useGetServersQuery } from "../features/servers/server.api"

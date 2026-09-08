@@ -1,3 +1,4 @@
+// socket.middleware.js
 import { getUserFromToken } from "../Middlewares/Auth.middleware.js";
 import { checkChannelAccess } from "../Service/Permission.service.js";
 

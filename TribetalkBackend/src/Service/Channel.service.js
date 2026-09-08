@@ -1,5 +1,8 @@
+//Channel.service.js
 import * as channelRepo from "../Repository/Channel.repository.js";
 import { ApiError } from "../Utils/ApiError.js";
+import { eventBus } from "../events/eventBus.js";
+import { EVENTS } from "../events/eventNames.js";
 
 // Internal helper for owner/moderator privileges
 const assertCanManageChannel = (server, userId) => {
@@ -38,14 +41,23 @@ export const createChannel = async ({ name, serverId, description, userId }) => 
 
     assertCanManageChannel(server, userId);
 
-    return await channelRepo.createChannelDoc({
+    const newChannel = await channelRepo.createChannelDoc({
         name: name.trim().toLowerCase(),
         server: serverId,
         createdBy: userId,
         type: "text",
         description: description?.trim() || ""
     });
+
+    // 📢 Fire internal domain event (Services stay pure, broadcasters handle the socket)
+    eventBus.emit(EVENTS.CHANNEL_CREATED, {
+        channel: newChannel,
+        serverId: serverId.toString()
+    });
+
+    return newChannel;
 };
+
 
 export const deleteChannel = async ({ channelId, userId }) => {
     const channel = await channelRepo.findChannelByIdWithServer(channelId);
@@ -108,5 +120,5 @@ export const channelActivity = async ({ channelId }) => {
     if (!channel) {
         throw new ApiError(404, "Channel not found");
     }
-    return channel._id;
+    return channel.server; // was: channel._id
 };

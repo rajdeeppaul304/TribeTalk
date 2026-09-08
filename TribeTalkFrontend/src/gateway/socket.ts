@@ -77,8 +77,8 @@ class SocketGateway {
   getUnreadCounts() {
     const socket = this.getSocket()
     console.log("get unread count called")
-    socket.emit("get_unread_counts", )
-    
+    socket.emit("get_unread_counts",)
+
   }
 
 
@@ -128,6 +128,14 @@ class SocketGateway {
     this.socket?.on("sync_messages", handler)
   }
 
+  onChannelCreated(handler: (data: { channel: Channel; serverId: string }) => void) {
+    this.socket?.on("channel_created", handler)
+  }
+
+  offChannelCreated(handler: (data: { channel: Channel; serverId: string }) => void) {
+    this.socket?.off("channel_created", handler)
+  }
+
   // onChannelActivity(handler: (data: {channelId: string}) => void) {
   //   this.socket?.on("channel_activity", 
   //     // (data)=>{
@@ -135,20 +143,20 @@ class SocketGateway {
   //     handler(data)
   //   })
   // }
-  onChannelActivity(handler: (data: {channelId: string}) => void) {
-   this.socket?.on("channel_activity", handler)
+  onChannelActivity(handler: (data: { channelId: string }) => void) {
+    this.socket?.on("channel_activity", handler)
   }
 
 
   onError(handler: (data: { message: string; clientId?: string }) => void) {
     this.socket?.on("error", handler)
   }
-onUnreadCounts(handler: (data: { [channelId: string]: number }) => void) {
-  this.socket?.on("unread_counts", (data) => {
-    console.log("Unread counts received:", data);
-    handler(data);
-  });
-}
+  onUnreadCounts(handler: (data: { [channelId: string]: number }) => void) {
+    this.socket?.on("unread_counts", (data) => {
+      console.log("Unread counts received:", data);
+      handler(data);
+    });
+  }
 
 
   // ======================
@@ -171,12 +179,12 @@ onUnreadCounts(handler: (data: { [channelId: string]: number }) => void) {
     this.socket?.off(event, handler)
   }
 
-  offUnreadCounts(handler: (data: {[channelId : string]:number}) => void) {
+  offUnreadCounts(handler: (data: { [channelId: string]: number }) => void) {
     this.socket?.off("unread_counts", handler)
   }
 
 
-  
+
   disconnect() {
     this.socket?.disconnect()
   }

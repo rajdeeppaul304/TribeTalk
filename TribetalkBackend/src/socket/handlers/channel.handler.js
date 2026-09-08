@@ -1,3 +1,4 @@
+// channel.handler.js
 import * as messageService from "../../Service/Message.service.js";
 import { formatMessageDTO } from "../socket.utils.js";
 

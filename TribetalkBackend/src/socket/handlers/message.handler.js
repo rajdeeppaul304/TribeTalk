@@ -1,49 +1,55 @@
+// message.handler.js
+
 import * as messageService from "../../Service/Message.service.js";
+import * as channelService from "../../Service/Channel.service.js";
+
 import { formatMessageDTO } from "../socket.utils.js";
 
 export default function registerMessageHandlers(io, socket) {
-    // Send message
     socket.on("send_message", async ({ channelId, content, clientId = null }) => {
-    try {
-        const user = socket.user;
+        try {
+            const user = socket.user;
 
-        const savedMessage = await messageService.addMessage({
-            content,
-            channelId,
-            UserId: user._id,
-            clientId
-        });
+            const savedMessage = await messageService.addMessage({
+                content,
+                channelId,
+                UserId: user._id,
+                clientId
+            });
 
-        // Attach sender as an object with username and avatar
-        const messageWithUser = {
-            ...(savedMessage.toObject ? savedMessage.toObject() : savedMessage),
-            sender: {
-                _id: user._id,
-                username: user.username,
-                avatar: user.avatar
-            }
-        };
+            const messageWithUser = {
+                ...(savedMessage.toObject ? savedMessage.toObject() : savedMessage),
+                sender: {
+                    _id: user._id,
+                    username: user.username,
+                    avatar: user.avatar
+                }
+            };
 
-        const messageDTO = formatMessageDTO(messageWithUser);
+            const messageDTO = formatMessageDTO(messageWithUser);
 
-        // Echo back to sender
-        socket.emit("new_message", messageDTO);
+            socket.emit("new_message", messageDTO);
 
-        // Broadcast to room members without clientId
-        socket.to(channelId).emit("new_message", {
-            ...messageDTO,
-            clientId: null
-        });
+            socket.to(channelId).emit("new_message", {
+                ...messageDTO,
+                clientId: null
+            });
 
-        io.emit("channel_activity", { channelId });
-    } catch (error) {
-        console.error("❌ Error in send_message:", error);
-        socket.emit("error", {
-            message: "Failed to send message",
-            clientId
-        });
-    }
-});
+            // 🔧 FIX: scope to the server room, not a global broadcast
+            const serverId = await channelService.channelActivity({ channelId });
+            io.to(`server:${serverId}`).emit("channel_activity", {
+                channelId,
+                serverId: serverId.toString()
+            });
+        } catch (error) {
+            console.error("❌ Error in send_message:", error);
+            socket.emit("error", {
+                message: "Failed to send message",
+                clientId
+            });
+        }
+    });
+
 
     // Edit message
     socket.on("edit_message", async ({ messageId, content }) => {

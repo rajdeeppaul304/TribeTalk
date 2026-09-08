@@ -1,5 +1,9 @@
+//Server.service.js
 import * as serverRepo from "../Repository/Server.repository.js";
 import { ApiError } from "../Utils/ApiError.js";
+import { eventBus } from "../events/eventBus.js";
+import { EVENTS } from "../events/eventNames.js";
+
 
 export const createServer = async ({ name, description, ownerId }) => {
     const trimmedName = name.trim();
@@ -134,8 +138,17 @@ export const joinServer = async ({ serverId, userId }) => {
 
     const updated = await serverRepo.addMemberToServer(serverId, userId);
 
+    // 📢 Fire domain event — realtime layer decides what to do with it
+    eventBus.emit(EVENTS.SERVER_MEMBER_JOINED, { serverId, userId });
+
     return {
         _id: updated._id,
         name: updated.name
     };
+};
+
+
+
+export const getServerRoomIds = async (userId) => {
+    return await serverRepo.findServerIdsForUser(userId);
 };

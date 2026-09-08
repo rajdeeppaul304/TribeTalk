@@ -1,34 +1,45 @@
+//gateway.js
 import SessionManager from "./SessionManager.js";
 import { socketAuthMiddleware, channelGuardMiddleware } from "./socket.middleware.js";
-
+import { initChannelBroadcaster } from "./broadcasters/channel.broadcaster.js";
+import { initServerBroadcaster } from "./broadcasters/server.broadcaster.js";
 import registerChannelHandlers from "./handlers/channel.handler.js";
 import registerMessageHandlers from "./handlers/message.handler.js";
 import registerSyncHandlers from "./handlers/sync.handler.js";
+import * as serverService from "../Service/Server.service.js";
 
 const typingUsers = new Map(); // channelId -> Set of userIds
 
 export default function setupGateway(io) {
     const sessionManager = new SessionManager();
 
-    // 1. Handshake authentication
+    // 📡 Initialize outbound only broadcasters
+    initChannelBroadcaster(io);
+    initServerBroadcaster(io, sessionManager);
+
     io.use(socketAuthMiddleware);
 
-    io.on("connection", (socket) => {
+    io.on("connection", async (socket) => {
         console.log(`✅ Socket connected: ${socket.id} | User: ${socket.user._id}`);
         sessionManager.addUser(socket.user._id.toString(), socket.id);
 
-        // 2. Event-level packet middleware & central errors
+        // Join every server room this user belongs to
+        try {
+            const serverIds = await serverService.getServerRoomIds(socket.user._id);
+            serverIds.forEach((id) => socket.join(`server:${id}`));
+        } catch (err) {
+            console.error("❌ Failed to join server rooms on connect:", err);
+        }
+
         socket.use(channelGuardMiddleware(socket));
         socket.on("error", (err) => {
             socket.emit("error", { message: err.message });
         });
 
-        // 3. Mount handlers
         registerChannelHandlers(io, socket, typingUsers);
         registerMessageHandlers(io, socket);
         registerSyncHandlers(io, socket);
 
-        // 4. Socket teardown
         socket.on("disconnect", () => {
             console.log(`❌ Socket disconnected: ${socket.id} | User: ${socket.user._id}`);
 
@@ -41,7 +52,6 @@ export default function setupGateway(io) {
                 }
             }
             sessionManager.removeSocket(socket.id);
-            // sessionManager.removeUser(socket.user._id.toString());
         });
     });
 }
