@@ -25,6 +25,7 @@ export interface ServerSummary {
   name: string
   description?: string
   owner?: string
+  inviteCode?: string
 }
 
 export interface ServerFull extends ServerSummary {

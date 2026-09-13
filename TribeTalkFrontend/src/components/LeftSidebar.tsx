@@ -1,5 +1,5 @@
 // LeftSidebar.tsx
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useServer } from "../hooks/useServer"
 import { useChannel } from "../hooks/useChannel"
 import CreateServerModal from "./CreateServerModal"
@@ -17,7 +17,11 @@ const LeftSidebar = () => {
   const [isServerModalOpen, setIsServerModalOpen] = useState(false)
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false)
   const unreadCounts = useSelector((state: RootState) => state.channel.unreadCounts)
-  const baseUrl="http://localhost:5173/server/join-server/"
+  const baseUrl=`${window.location.origin}/server/join-server/`
+  const activeServer = servers.find((server) => server._id === activeServerId)
+  const inviteUrl = activeServer?.inviteCode
+    ? `${baseUrl}${activeServer._id}?invite=${encodeURIComponent(activeServer.inviteCode)}`
+    : null
   // const activeChannelId = useSelector(
   //     (state: RootState) => state.channel.activeChannelId
   //   )
@@ -36,7 +40,8 @@ const LeftSidebar = () => {
     <div className="w-64 h-screen bg-gray-800 text-white p-4">
       <div className="flex gap-2 justify-evenly">
         <h1 className="text-xl font-bold mb-6">My App</h1>
-      <button onClick={()=>copyToClipboard(baseUrl+activeServerId)}
+      <button onClick={() => inviteUrl && copyToClipboard(inviteUrl)}
+      disabled={!inviteUrl}
       className="
         flex items-center gap-2 
         bg-blue-600 hover:bg-blue-700
@@ -46,7 +51,7 @@ const LeftSidebar = () => {
         shadow-md hover:shadow-lg
         transition-all duration-200
         active:scale-95
-        focus:outline-none focus:ring-2 focus:ring-blue-400
+        focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50
       "
     >
       📋 Copy

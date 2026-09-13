@@ -28,7 +28,22 @@ export const createMessage = async ({ content, sender, channel, clientId = null,
     isSystemMessage
   });
 
-  await Channel.findByIdAndUpdate(channel, { lastMessageId: message._id });
+  await Channel.findOneAndUpdate(
+    {
+      _id: channel,
+      $or: [
+        { lastMessageSequence: { $lt: message.sequence } },
+        { lastMessageSequence: { $exists: false } }
+      ]
+    },
+    {
+      $set: {
+        lastMessageId: message._id,
+        lastMessageSequence: message.sequence,
+        lastMessageAt: message.createdAt
+      }
+    }
+  );
 
   return message;
 };
@@ -97,6 +112,18 @@ export const findMessageByIdAndChannel = async (messageId, channelId) => {
     channel: channelId, 
     deletedAt: null 
   });
+};
+
+export const findMessageById = async (messageId) => {
+  return await Message.findById(messageId).select("channel deletedAt").lean();
+};
+
+export const deleteMessagesAndReadStatesForChannels = async (channelIds) => {
+  if (channelIds.length === 0) return;
+  await Promise.all([
+    Message.deleteMany({ channel: { $in: channelIds } }),
+    ReadState.deleteMany({ channel: { $in: channelIds } })
+  ]);
 };
 
 /**

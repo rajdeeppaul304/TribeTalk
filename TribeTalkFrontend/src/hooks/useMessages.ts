@@ -7,11 +7,12 @@ import { useLazyGetMessageHistoryQuery } from "../features/messages/message.api"
 import { 
   addMessage, 
   prependMessages, 
-  editMessage as editMessageAction,
   setEditingMessage 
 } from "../features/messages/message.slice"
 import { useAuth } from "../features/auth/useAuth"
 import type { Message } from "../features/types"
+
+const EMPTY_MESSAGES: Message[] = []
 
 /**
  * Complete hook for message operations
@@ -22,13 +23,13 @@ export function useMessages(channelId: string | null) {
   const [fetchHistory] = useLazyGetMessageHistoryQuery()
   
   // Typing timeout ref
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isTypingRef = useRef(false)
 
   // Get messages from Redux
   const messages = useSelector((state: RootState) =>
     channelId ? state.message.messagesByChannel[channelId] : []
-  ) || []
+  ) ?? EMPTY_MESSAGES
 
   const editingMessageId = useSelector((state: RootState) => 
     state.message.editingMessageId
@@ -45,7 +46,7 @@ export function useMessages(channelId: string | null) {
 
   const sendMessage = useCallback((content: string) => {
     console.log("user object:", user)
-  const senderId = user?._id || user?.id
+  const senderId = user?._id
   if (!channelId || !senderId) return
 
 
@@ -56,7 +57,7 @@ export function useMessages(channelId: string | null) {
   const optimisticMessage: Message = {
   id: clientId,
   content,
-  senderId: String(user._id || user.id),
+  senderId: user._id,
   senderUsername: user.username,
   senderAvatar: user.avatar,
   channelId,

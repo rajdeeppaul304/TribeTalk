@@ -236,19 +236,18 @@ const MessageItem = ({
   onDelete,
 }: MessageItemProps) => {
   const [showActions, setShowActions] = useState(false)
-  const [showSending, setShowSending] = useState(false)
+  const [hasWaitedToSend, setHasWaitedToSend] = useState(false)
 
   // Only show "Sending..." if the message is still pending after 400ms.
   // The message itself still renders instantly (optimistic UI) — this
   // just delays the label so fast round-trips don't flash it.
   useEffect(() => {
-    if (!message.isPending) {
-      setShowSending(false)
-      return
-    }
-    const timer = setTimeout(() => setShowSending(true), 400)
+    if (!message.isPending) return
+    const timer = setTimeout(() => setHasWaitedToSend(true), 400)
     return () => clearTimeout(timer)
   }, [message.isPending])
+
+  const showSending = Boolean(message.isPending && hasWaitedToSend)
 
   const formatTime = (timestamp?: string) => {
     if (!timestamp) return ""
@@ -313,7 +312,7 @@ const MessageItem = ({
             (isOwn ? currentUsername : `User ${message.senderId?.slice(-4)}`)}
         </span>
         <span className="text-xs text-gray-500">
-          {formatTime(message.timestamp || (message as any).createdAt)}
+          {formatTime(message.timestamp || message.createdAt)}
         </span>
         {showSending && (
           <span className="text-xs text-yellow-500">Sending...</span>

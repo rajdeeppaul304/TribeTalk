@@ -9,6 +9,15 @@ interface Props {
   onChannelCreated?: () => void
 }
 
+type ApiError = {
+  status?: number | string
+  data?: { message?: string }
+  message?: string
+}
+
+const isApiError = (error: unknown): error is ApiError =>
+  typeof error === "object" && error !== null
+
 const CreateChannelModal = ({ isOpen, onClose, serverId, onChannelCreated }: Props) => {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -37,21 +46,22 @@ const CreateChannelModal = ({ isOpen, onClose, serverId, onChannelCreated }: Pro
       setError(null)
       onChannelCreated?.()
       onClose()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to create channel", err)
+      const apiError = isApiError(err) ? err : {}
       
       // Handle different error types
-      if (err.status === 403) {
+      if (apiError.status === 403) {
         setError("Permission denied: Only server owner or moderators can create channels")
-      } else if (err.status === 401) {
+      } else if (apiError.status === 401) {
         setError("You must be logged in to create channels")
-      } else if (err.status === 'PARSING_ERROR') {
+      } else if (apiError.status === 'PARSING_ERROR') {
         // Backend returned HTML instead of JSON (likely an error page)
         setError("Server error: Unable to create channel. Check console for details.")
-      } else if (err.data?.message) {
-        setError(err.data.message)
-      } else if (err.message) {
-        setError(err.message)
+      } else if (apiError.data?.message) {
+        setError(apiError.data.message)
+      } else if (apiError.message) {
+        setError(apiError.message)
       } else {
         setError("Failed to create channel. Please try again.")
       }

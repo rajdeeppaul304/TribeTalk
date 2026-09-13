@@ -1,5 +1,5 @@
 // features/auth/auth.types.ts
-export default interface User {
+export interface User {
   _id: string
   username: string
   email: string
@@ -9,11 +9,17 @@ export default interface User {
 }
 
 
-export default interface AuthResponse{
-    user : User;
-    accessToken : string;
-
-
-
+export interface ApiResponse<T> {
+  statusCode: number
+  data: T
+  message: string
+  success: boolean
 }
 
+export interface AuthPayload {
+  user: User
+  accessToken: string
+  refreshToken?: string
+}
+
+export type AuthResponse = ApiResponse<AuthPayload>

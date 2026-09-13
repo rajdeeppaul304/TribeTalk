@@ -15,7 +15,7 @@ interface UseReadStateProps {
  */
 export function useReadState({ channelId, messages, isVisible }: UseReadStateProps) {
   const lastReadMessageIdRef = useRef<string | null>(null)
-  const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const markAsReadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   /**
    * Reset tracking ref and pending timer when switching channels
@@ -71,7 +71,7 @@ export function useReadState({ channelId, messages, isVisible }: UseReadStatePro
     if (channelId && messages.length > 0 && isVisible) {
       markAsRead()
     }
-  }, [channelId, isVisible, markAsRead])
+  }, [channelId, messages.length, isVisible, markAsRead])
 
   /**
    * Mark as read when window gains focus

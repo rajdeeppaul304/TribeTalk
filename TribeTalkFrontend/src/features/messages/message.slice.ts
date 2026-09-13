@@ -5,8 +5,7 @@ import type { Message, MessageState } from "../types"
 
 const MAX_MESSAGES_PER_CHANNEL = 100
 
-// Helper to get identifier regardless of whether it's 'id' or '_id'
-const getMsgKey = (m: any): string => m?.id || m?._id || m?.clientId || ""
+const getMsgKey = (message: Message): string => message.id || message.clientId || ""
 
 const initialState: MessageState = {
   messagesByChannel: {},

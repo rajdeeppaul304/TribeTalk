@@ -1,15 +1,16 @@
 // features/auth/auth.api.ts
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
-import type AuthResponse from "./auth.types"
+import type { ApiResponse, AuthResponse, User } from "./auth.types"
+import { env } from "../../config/env"
 
 export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:3000/api/v1",
+    baseUrl: env.apiUrl,
     credentials: "include", // matches your axios config
   }),
   endpoints: (builder) => ({
-    register: builder.mutation<AuthResponse, { username: string; email: string; password: string }>({
+    register: builder.mutation<ApiResponse<User>, { username: string; email: string; password: string }>({
       query: (data) => ({
         url: "/users/register",
         method: "POST",
@@ -29,15 +30,15 @@ export const authApi = createApi({
         method: "POST",
       }),
     }),
-    refreshToken: builder.mutation<{ data: { accessToken: string }; message: string }, void>({
+    refreshToken: builder.mutation<ApiResponse<{ accessToken: string }>, void>({
       query: () => ({
         url: "/users/refresh-token",
         method: "POST",
       }),
     }),
-    getCurrentUser: builder.query<AuthResponse["user"], void>({
+    getCurrentUser: builder.query<User, void>({
   query: () => "/users/current-user",
-  transformResponse: (response: { data: AuthResponse["user"] }) => response.data,
+  transformResponse: (response: ApiResponse<User>) => response.data,
 }),
   }),
 })

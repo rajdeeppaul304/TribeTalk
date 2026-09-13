@@ -1,12 +1,14 @@
 // gateway/socket.ts (UPDATED)
 import { io, Socket } from "socket.io-client"
 import type { Channel, Message, SyncState, TypingIndicator } from "../features/types"
+import { env } from "../config/env"
 
 class SocketGateway {
   private socket: Socket | null = null
 
   connect(token: string) {
-    this.socket = io("http://localhost:3000", {
+    this.socket?.disconnect()
+    this.socket = io(env.socketUrl, {
       auth: { token }
     })
   }
@@ -147,6 +149,10 @@ class SocketGateway {
     this.socket?.on("channel_activity", handler)
   }
 
+  offChannelActivity(handler: (data: { channelId: string }) => void) {
+    this.socket?.off("channel_activity", handler)
+  }
+
 
   onError(handler: (data: { message: string; clientId?: string }) => void) {
     this.socket?.on("error", handler)
@@ -175,7 +181,7 @@ class SocketGateway {
   // Cleanup
   // ======================
 
-  off(event: string, handler?: (...args: any[]) => void) {
+  off(event: string, handler?: (...args: unknown[]) => void) {
     this.socket?.off(event, handler)
   }
 

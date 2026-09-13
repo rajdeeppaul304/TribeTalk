@@ -1,6 +1,8 @@
 //Server.repository.js
 import { Server } from "../Models/Server.model.js";
 import { Channel } from "../Models/Channel.model.js";
+import { Message } from "../Models/Message.model.js";
+import { ReadState } from "../Models/ReadState.model.js";
 
 export const findServerByNameAndOwner = async (name, ownerId) => {
     return await Server.findOne({ name, owner: ownerId });
@@ -15,6 +17,12 @@ export const findServerById = async (serverId) => {
 };
 
 export const deleteServerById = async (serverId) => {
+    const channelIds = await Channel.find({ server: serverId }).distinct("_id");
+    await Promise.all([
+        Message.deleteMany({ channel: { $in: channelIds } }),
+        ReadState.deleteMany({ channel: { $in: channelIds } }),
+        Channel.deleteMany({ server: serverId })
+    ]);
     return await Server.findByIdAndDelete(serverId);
 };
 
@@ -26,7 +34,7 @@ export const findServersForUser = async (userId) => {
             { members: userId }
         ]
     })
-        .select("name _id description owner moderators members")
+        .select("name _id description owner moderators members inviteCode")
         .sort({ createdAt: -1 })
         .lean();
 };
@@ -53,6 +61,14 @@ export const addMemberToServer = async (serverId, userId) => {
     return await Server.findByIdAndUpdate(
         serverId,
         { $addToSet: { members: userId } },
+        { new: true }
+    );
+};
+
+export const saveServerInviteCode = async (serverId, inviteCode) => {
+    return await Server.findByIdAndUpdate(
+        serverId,
+        { $set: { inviteCode } },
         { new: true }
     );
 };

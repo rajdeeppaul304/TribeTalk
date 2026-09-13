@@ -79,11 +79,12 @@ useEffect(() => {
     return () => {
       socketGateway.offUnreadCounts(handleUnreadCounts)
       socketGateway.offChannelCreated(handleChannelCreated)
+      socketGateway.offChannelActivity(incrementUnreadCount)
       socketGateway.off("connect", handleReconnect)
 
 
     }
-  }, [dispatch, serverId])
+  }, [dispatch, serverId, refetchChannels])
 
 
   return {

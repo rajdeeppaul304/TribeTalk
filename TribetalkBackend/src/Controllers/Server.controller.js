@@ -93,12 +93,13 @@ export const getServerInfo = asyncHandler(async (req, res) => {
 export const joinServer = asyncHandler(async (req, res) => {
     const serverId = req.params.id;
     const userId = req.user._id;
+    const { inviteCode } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(serverId)) {
         throw new ApiError(400, "Invalid server ID");
     }
 
-    const joinedServer = await serverService.joinServer({ serverId, userId });
+    const joinedServer = await serverService.joinServer({ serverId, userId, inviteCode });
 
     return res.status(200).json(
         new ApiResponse(200, joinedServer, "Joined server successfully")

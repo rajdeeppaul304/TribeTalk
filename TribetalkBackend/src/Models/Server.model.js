@@ -1,4 +1,5 @@
 import mongoose, { Schema, Types } from "mongoose";
+import { randomUUID } from "node:crypto";
 
 const serverSchema = new Schema(
   {
@@ -14,6 +15,13 @@ const serverSchema = new Schema(
       type: String,
       maxlength: 200,
       default: "",
+    },
+
+    inviteCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: () => randomUUID(),
     },
 
     owner: {

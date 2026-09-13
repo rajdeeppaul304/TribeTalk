@@ -2,7 +2,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import type { PayloadAction } from "@reduxjs/toolkit"
 import type { Channel, ChannelState } from '../types'
-import { sampleChannelsByServer } from "../sampleData"
 
 
 
@@ -12,9 +11,8 @@ import { sampleChannelsByServer } from "../sampleData"
 //   activeChannelId: null
 // }
 
-// comment this code to use actual data instead of filler
 const initialState: ChannelState = {
-  channelsByServer: sampleChannelsByServer,
+  channelsByServer: {},
   activeChannelId: null,
   unreadCounts:{}
   

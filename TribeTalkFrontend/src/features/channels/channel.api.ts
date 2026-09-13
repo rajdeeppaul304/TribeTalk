@@ -23,7 +23,7 @@ export const channelApi = baseApi.injectEndpoints({
       }),
       transformResponse: (response: ApiResponse<Channel>) => response.data,
       // FIXED: Invalidate both the server details AND the channel list
-      invalidatesTags: (result, error, { serverId }) => [
+      invalidatesTags: (_result, _error, { serverId }) => [
         { type: "Servers", id: serverId },  // refetch server (which includes channels)
         { type: "Channels", id: "LIST" },   // refetch any channel lists
       ],
@@ -33,7 +33,7 @@ export const channelApi = baseApi.injectEndpoints({
     getChannelById: builder.query<Channel, string>({
       query: (channelId) => `/channels/channel-info/${channelId}`,
       transformResponse: (response: ApiResponse<Channel>) => response.data,
-      providesTags: (result, error, channelId) => [{ type: "Channels", id: channelId }],
+      providesTags: (_result, _error, channelId) => [{ type: "Channels", id: channelId }],
     }),
   }),
 })

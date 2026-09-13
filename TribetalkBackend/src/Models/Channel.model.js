@@ -53,6 +53,11 @@ const channelSchema = new Schema(
       type: Date,
       default: null,
     },
+
+    lastMessageSequence: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

@@ -27,7 +27,7 @@ export const serverApi = baseApi.injectEndpoints({
     getServerById: builder.query<ServerFull, string>({
       query: (serverId) => `/server/single-server/${serverId}`,
       transformResponse: (response: ApiResponse<ServerFull>) => response.data,
-      providesTags: (result, error, serverId) => [{ type: "Servers", id: serverId }]
+      providesTags: (_result, _error, serverId) => [{ type: "Servers", id: serverId }]
     }),
 
     // New endpoints
@@ -51,16 +51,17 @@ export const serverApi = baseApi.injectEndpoints({
         body,
       }),
       transformResponse: (response: ApiResponse<ServerFull>) => response.data,
-      invalidatesTags: (result, error, { serverId }) => [{ type: "Servers", id: serverId }],
+      invalidatesTags: (_result, _error, { serverId }) => [{ type: "Servers", id: serverId }],
     }),
 
     joinServer: builder.mutation<
       { _id: string; name: string },
-      { serverId: string }
+      { serverId: string; inviteCode: string }
     >({
-      query: ({ serverId }) => ({
+      query: ({ serverId, inviteCode }: { serverId: string; inviteCode: string }) => ({
         url: `/server/join-server/${serverId}`,
         method: "POST",
+        body: { inviteCode },
       }),
       transformResponse: (response: ApiResponse<{ _id: string; name: string }>) =>
         response.data,

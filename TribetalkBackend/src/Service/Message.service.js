@@ -72,6 +72,12 @@ export const editMessage = async (messageId, content, userId) => {
     throw new ApiError(400, "Message content cannot be empty");
   }
 
+  const message = await messageRepo.findMessageById(messageId);
+  if (!message || message.deletedAt) {
+    throw new ApiError(404, "Message not found");
+  }
+  await assertChannelAccess(userId, message.channel);
+
   const updatedMessage = await messageRepo.updateMessageContent(messageId, userId, content.trim());
 
   if (!updatedMessage) {
@@ -85,6 +91,12 @@ export const editMessage = async (messageId, content, userId) => {
  * Delete a message
  */
 export const deleteMessage = async (messageId, userId) => {
+  const message = await messageRepo.findMessageById(messageId);
+  if (!message || message.deletedAt) {
+    throw new ApiError(404, "Message not found");
+  }
+  await assertChannelAccess(userId, message.channel);
+
   const deletedMessage = await messageRepo.softDeleteMessage(messageId, userId);
 
   if (!deletedMessage) {

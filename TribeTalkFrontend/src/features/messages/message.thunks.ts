@@ -7,25 +7,31 @@ import type { Message } from "../types"
 // Default mock messages
 const MOCK_MESSAGES: Message[] = [
   {
-    id: 1,
+    id: "1",
     content: "Welcome to the channel!",
-    senderId: 101,
+    senderId: "101",
     channelId: "1",  // FIXED: now string
     timestamp: new Date().toISOString(),
+    sequence: 1,
+    isEdited: false,
   },
   {
-    id: 2,
+    id: "2",
     content: "Hello everyone 👋",
-    senderId: 102,
+    senderId: "102",
     channelId: "1",  // FIXED: now string
     timestamp: new Date().toISOString(),
+    sequence: 2,
+    isEdited: false,
   },
   {
-    id: 3,
+    id: "3",
     content: "This is a mock message.",
-    senderId: 103,
+    senderId: "103",
     channelId: "1",  // FIXED: now string
     timestamp: new Date().toISOString(),
+    sequence: 3,
+    isEdited: false,
   },
 ]
 
@@ -47,7 +53,7 @@ export const fetchMessagesForChannel = createAsyncThunk<
     // Since backend is not setup, return mock messages instead
     const mockMessages = MOCK_MESSAGES.map((msg) => ({
       ...msg,
-      id: msg.id + parseInt(channelId) * 100,  // unique id per channel
+      id: `${msg.id}-${channelId}`,
       channelId,
       timestamp: new Date().toISOString(),
     }))

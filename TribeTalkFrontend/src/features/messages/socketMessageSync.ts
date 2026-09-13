@@ -5,13 +5,10 @@ import {
   replaceMessage,
   editMessage,
   deleteMessage,
-  markMessageFailed,
   addTypingUser,
   removeTypingUser,
-  setMessagesForChannel,
 } from "./message.slice"
 import type { AppDispatch } from "../../app/store"
-import type { Message } from "../types"
 
 /**
  * Initialize all socket listeners for real-time messaging

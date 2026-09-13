@@ -9,6 +9,25 @@ type ApiResponse<T> = {
   success?: boolean
 }
 
+type BackendSender = {
+  _id: string
+  username?: string
+  avatar?: string
+}
+
+type BackendMessage = {
+  _id: string
+  content: string
+  sender: BackendSender | string
+  channel: string
+  sequence: number
+  createdAt: string
+  isEdited: boolean
+  editedAt?: string | null
+  isSystemMessage?: boolean
+  clientId?: string | null
+}
+
 export const messageApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Get message history (cursor-based pagination)
@@ -23,25 +42,28 @@ export const messageApi = baseApi.injectEndpoints({
         return `/messages/${channelId}/messages?${params.toString()}`
       },
       transformResponse: (response: ApiResponse<{
-        messages: any[]
+        messages: BackendMessage[]
         hasMore: boolean
         cursor: string | null
       }>) => {
         // Transform backend message format to frontend format
-        const messages = response.data.messages.map((msg: any) => ({
+        const messages = response.data.messages.map((msg) => {
+          const sender = typeof msg.sender === "string" ? { _id: msg.sender } : msg.sender
+          return {
           id: msg._id,
           content: msg.content,
-          senderId: msg.sender._id || msg.sender,
-          senderUsername: msg.sender.username || null,
-          senderAvatar: msg.sender.avatar || null,
+          senderId: sender._id,
+          senderUsername: sender.username || undefined,
+          senderAvatar: sender.avatar || undefined,
           channelId: msg.channel,
           sequence: msg.sequence,
           timestamp: msg.createdAt,
           isEdited: msg.isEdited,
-          editedAt: msg.editedAt || null,
+          editedAt: msg.editedAt || undefined,
           isSystemMessage: msg.isSystemMessage || false,
-          clientId: msg.clientId || null,
-        }))
+          clientId: msg.clientId || undefined,
+          }
+        })
         return {
           messages,
           hasMore: response.data.hasMore,
@@ -56,7 +78,11 @@ export const messageApi = baseApi.injectEndpoints({
       string
     >({
       query: (channelId) => `/messages/${channelId}/sync`,
-      transformResponse: (response: ApiResponse<any>) => response.data,
+      transformResponse: (response: ApiResponse<{
+        latestMessageId: string | null
+        latestSequence: number
+        unreadCount: number
+      }>) => response.data,
     }),
 
     // Mark channel as read

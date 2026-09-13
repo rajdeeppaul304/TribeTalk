@@ -3,6 +3,7 @@ import * as serverRepo from "../Repository/Server.repository.js";
 import { ApiError } from "../Utils/ApiError.js";
 import { eventBus } from "../events/eventBus.js";
 import { EVENTS } from "../events/eventNames.js";
+import { randomUUID } from "node:crypto";
 
 
 export const createServer = async ({ name, description, ownerId }) => {
@@ -39,7 +40,11 @@ export const deleteServer = async ({ serverId, userId }) => {
 export const listServers = async (userId) => {
     const servers = await serverRepo.findServersForUser(userId);
 
-    return servers.map((server) => {
+    return await Promise.all(servers.map(async (server) => {
+        const inviteCode = server.inviteCode || randomUUID();
+        if (!server.inviteCode) {
+            await serverRepo.saveServerInviteCode(server._id, inviteCode);
+        }
         let role = "member";
 
         if (server.owner.toString() === userId.toString()) {
@@ -52,9 +57,10 @@ export const listServers = async (userId) => {
             _id: server._id,
             name: server.name,
             description: server.description,
-            role
+            role,
+            inviteCode
         };
-    });
+    }));
 };
 
 export const editServer = async ({ serverId, name, description, userId }) => {
@@ -121,10 +127,14 @@ export const getServerInfo = async ({ serverId, userId }) => {
     };
 };
 
-export const joinServer = async ({ serverId, userId }) => {
+export const joinServer = async ({ serverId, userId, inviteCode }) => {
     const server = await serverRepo.findServerById(serverId);
     if (!server) {
         throw new ApiError(404, "Server not found");
+    }
+
+    if (!inviteCode || inviteCode !== server.inviteCode) {
+        throw new ApiError(403, "Invalid or expired invite link");
     }
 
     const isAlreadyMember =

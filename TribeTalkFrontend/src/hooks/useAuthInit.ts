@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux"
 import { authApi } from "../features/auth/auth.api"
 import { setAuth, clearAuth } from "../features/auth/authStore/auth.slice"
@@ -7,25 +7,32 @@ import type { AppDispatch } from "../app/store"
 
 export const useAuthInit = () => {
   const dispatch = useDispatch<AppDispatch>()
+  const [isLoading, setIsLoading] = useState(true)
 
-  return new Promise<void>((resolve) => {
+  useEffect(() => {
+    let isMounted = true
+
     const init = async () => {
       try {
-        const user = await dispatch(authApi.endpoints.getCurrentUser.initiate()).unwrap()
         const tokenData = await dispatch(authApi.endpoints.refreshToken.initiate()).unwrap()
-        dispatch(
-          setAuth({
-            user,
-            token: tokenData?.data?.accessToken ?? null,
-          })
-        )
+        const user = await dispatch(authApi.endpoints.getCurrentUser.initiate()).unwrap()
+        if (isMounted) {
+          dispatch(setAuth({ user, token: tokenData.data.accessToken }))
+        }
       } catch (err) {
         console.error("Auth initialization failed", err)
-        dispatch(clearAuth())
+        if (isMounted) dispatch(clearAuth())
       } finally {
-        resolve()
+        if (isMounted) setIsLoading(false)
       }
     }
+
     init()
-  })
+
+    return () => {
+      isMounted = false
+    }
+  }, [dispatch])
+
+  return isLoading
 }

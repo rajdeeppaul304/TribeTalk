@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useLoginMutation, useGetCurrentUserQuery } from "../features/auth/auth.api"
+import { useLoginMutation } from "../features/auth/auth.api"
 import { useAuth } from "../features/auth/useAuth"
 import { useDispatch } from "react-redux"
 import { authApi } from "../features/auth/auth.api"
+import type { AppDispatch } from "../app/store"
 const Login = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -16,7 +17,7 @@ const Login = () => {
   // const { refetch: refetchCurrentUser } = useGetCurrentUserQuery(undefined, {
   //   skip: true, // we want to manually trigger refetch after login
   // })
-  const dispatch = useDispatch()
+  const dispatch = useDispatch<AppDispatch>()
 
 const submitHandler = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault()
@@ -27,7 +28,7 @@ const submitHandler = async (e: React.FormEvent<HTMLFormElement>) => {
     const user = await dispatch(authApi.endpoints.getCurrentUser.initiate()).unwrap()
 
     // Set auth state
-    setAuth(user, loginRes.data?.accessToken ?? null)
+    setAuth(user, loginRes.data.accessToken)
 
     navigate("/home", { replace: true })
   } catch (err) {

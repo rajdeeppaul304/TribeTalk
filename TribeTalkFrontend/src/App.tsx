@@ -34,6 +34,7 @@ function App() {
       // Cleanup on unmount
       return () => {
         cleanupMessageSync()
+        socketGateway.disconnect()
       }
     }
   }, [isAuthenticated, token, dispatch])
