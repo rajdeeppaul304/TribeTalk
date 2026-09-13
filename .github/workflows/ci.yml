@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            TribetalkBackend/package-lock.json
+            TribeTalkFrontend/package-lock.json
+      - name: Install backend dependencies
+        working-directory: TribetalkBackend
+        run: npm ci
+      - name: Install frontend dependencies
+        working-directory: TribeTalkFrontend
+        run: npm ci
+      - name: Backend tests
+        working-directory: TribetalkBackend
+        run: npm test
+      - name: Frontend production build
+        working-directory: TribeTalkFrontend
+        run: npm run build
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: TribetalkBackend/package-lock.json
+      - name: Install test dependencies
+        working-directory: TribetalkBackend
+        run: npm ci
+      - name: Install Chromium
+        working-directory: TribetalkBackend
+        run: npx playwright install --with-deps chromium
+      - name: Create CI environment
+        run: |
+          cp TribetalkBackend/.env.example TribetalkBackend/.env
+          sed -i 's/replace-with-a-long-random-secret/ci-access-secret-which-is-long-enough/g' TribetalkBackend/.env
+          sed -i 's/replace-with-a-different-long-random-secret/ci-refresh-secret-which-is-long-enough/g' TribetalkBackend/.env
+      - name: Start application stack
+        run: docker compose up --build -d
+      - name: Run browser smoke tests
+        working-directory: TribetalkBackend
+        run: npm run test:e2e
+      - name: Docker logs on failure
+        if: failure()
+        run: docker compose logs

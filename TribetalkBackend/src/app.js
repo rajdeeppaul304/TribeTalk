@@ -3,16 +3,27 @@ import cors from "cors"
 import cookieParser from "cookie-parser"
 import helmet from "helmet"
 import swaggerUi from "swagger-ui-express"
+import pinoHttp from "pino-http"
+import { randomUUID } from "node:crypto"
 import { errorHandler } from "./Middlewares/Error.middleware.js"
 import { env } from "./config/env.js"
 import { apiLimiter } from "./Middlewares/RateLimit.middleware.js"
 import { openapiSpecification } from "./config/openapi.js"
 import { isRedisReady } from "./config/redis.js"
 import { isElasticsearchReady } from "./config/elasticsearch.js"
+import { logger } from "./config/logger.js"
+import { metrics } from "./config/metrics.js"
 
 const app = express()
 
 app.set("trust proxy", 1)
+app.use(pinoHttp({ logger, genReqId: (req, res) => req.headers["x-request-id"] || randomUUID(), customLogLevel: (_req, res, error) => error || res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info" }))
+app.use((req, res, next) => {
+    metrics.increment("httpRequests")
+    res.setHeader("X-Request-ID", req.id)
+    res.on("finish", () => { if (res.statusCode >= 400) metrics.increment("httpErrors") })
+    next()
+})
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "same-origin" },
     contentSecurityPolicy: {
@@ -44,6 +55,11 @@ app.get("/api/health", (_req, res) => {
         redis: isRedisReady() ? "connected" : "unavailable",
         elasticsearch: isElasticsearchReady() ? "connected" : "unavailable",
     })
+})
+
+app.get("/api/admin/metrics", (req, res) => {
+    if (!env.METRICS_TOKEN || req.header("x-metrics-token") !== env.METRICS_TOKEN) return res.status(404).json({ message: "Not found" })
+    return res.json({ status: "ok", metrics: metrics.snapshot() })
 })
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapiSpecification, { explorer: true }))

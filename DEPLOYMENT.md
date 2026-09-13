@@ -40,8 +40,21 @@ MongoDB and Redis data persist in the `mongo-data` and `redis-data` Docker volum
    docker compose up --build -d
    ```
 
-4. Put HTTPS in front of port 8080 (for example, a cloud load balancer, Caddy, or a host-level Nginx configuration). Cookies are configured for same-origin browser access through the included Nginx proxy.
+4. For a real HTTPS deployment, point your domain DNS A record at the server, obtain a Let's Encrypt certificate, then set `DOMAIN`, `PUBLIC_ORIGIN=https://your-domain`, and `COOKIE_SECURE=true`. Start the TLS overlay:
+
+   ```powershell
+   docker compose -f docker-compose.yml -f docker-compose.production.yml up --build -d
+   ```
+
+   The production Nginx layer terminates TLS, redirects HTTP to HTTPS, enables compression/static caching, and preserves Socket.IO WebSocket upgrades. Certificates are intentionally not stored in this repository.
 5. Use a managed MongoDB service or add backups before treating the deployment as production.
+
+## Resume-ready demo checklist
+
+- Deploy using a domain you control and HTTPS; then add its URL to your README.
+- Create a separate low-privilege demo account manually after deployment. Do not commit its password or API tokens—list credentials only where you deliberately share the demo.
+- Add `METRICS_TOKEN` to the backend environment. `GET /api/admin/metrics` requires that value in the `X-Metrics-Token` header and reports request/error totals, active socket users, socket connections, and message throughput.
+- Keep production logs as JSON (`LOG_LEVEL=info`); request IDs are returned in `X-Request-ID` and included in HTTP logs.
 
 ## Local non-Docker development
 
@@ -69,6 +82,8 @@ The frontend `.env` defaults point to `http://localhost:3000`; Docker overrides 
 ## Redis
 
 Docker starts Redis automatically. It provides shared request-rate counters, shared Socket.IO event delivery when multiple backend containers are running, and short-lived presence keys for active sockets. The health endpoint reports the Redis connection state.
+
+Socket.IO now applies Zod payload validation and a Redis-backed, per-user event rate limit before each recognized event handler. The stricter limits apply to message sends, typing events, edits/deletes, reactions, and pins; the guard uses an in-memory fallback only when Redis is intentionally unavailable in local development.
 
 For non-Docker development, set `REDIS_URL=redis://127.0.0.1:6379` to enable these features. If `REDIS_URL` is omitted, TribeTalk continues with local in-memory rate limits and a single-instance Socket.IO server.
 

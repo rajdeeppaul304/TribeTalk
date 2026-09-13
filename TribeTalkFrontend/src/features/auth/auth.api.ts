@@ -1,6 +1,6 @@
 // features/auth/auth.api.ts
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
-import type { ApiResponse, AuthResponse, PublicProfile, User } from "./auth.types"
+import type { ApiResponse, AppNotification, AuthResponse, PublicProfile, User } from "./auth.types"
 import { env } from "../../config/env"
 
 export const authApi = createApi({
@@ -40,13 +40,20 @@ export const authApi = createApi({
   query: () => "/users/current-user",
   transformResponse: (response: ApiResponse<User>) => response.data,
 }),
-    updateProfile: builder.mutation<User, { displayName?: string; avatar?: string; bio?: string }>({
+    updateProfile: builder.mutation<User, { displayName?: string; avatar?: string; bio?: string; notificationPreferences?: { browser?: boolean; mentions?: boolean; unread?: boolean } }>({
       query: (body) => ({ url: "/users/profile", method: "PATCH", body }),
       transformResponse: (response: ApiResponse<User>) => response.data,
     }),
     getPublicUserProfile: builder.query<PublicProfile, string>({
       query: (userId) => `/users/${userId}/profile`,
       transformResponse: (response: ApiResponse<PublicProfile>) => response.data,
+    }),
+    getNotifications: builder.query<AppNotification[], void>({
+      query: () => "/users/notifications",
+      transformResponse: (response: ApiResponse<AppNotification[]>) => response.data,
+    }),
+    markNotificationsRead: builder.mutation<void, string[] | void>({
+      query: (ids) => ({ url: "/users/notifications", method: "PATCH", body: { ids: ids || [] } }),
     }),
   }),
 })
@@ -59,4 +66,6 @@ export const {
   useGetCurrentUserQuery,
   useUpdateProfileMutation,
   useGetPublicUserProfileQuery,
+  useGetNotificationsQuery,
+  useMarkNotificationsReadMutation,
 } = authApi

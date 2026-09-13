@@ -52,6 +52,6 @@ export const updateUserProfile = async (userId, profile) => {
 
 export const findPublicUserProfileById = async (userId) => {
     return await User.findById(userId)
-        .select("_id username displayName avatar bio createdAt")
+        .select("_id username displayName avatar bio createdAt lastSeenAt")
         .lean();
 };

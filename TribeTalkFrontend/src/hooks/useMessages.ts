@@ -7,7 +7,8 @@ import { useLazyGetMessageHistoryQuery } from "../features/messages/message.api"
 import { 
   addMessage, 
   prependMessages, 
-  setEditingMessage 
+  setEditingMessage,
+  markMessagePending,
 } from "../features/messages/message.slice"
 import { useAuth } from "../features/auth/useAuth"
 import type { Message, MessageAttachment } from "../features/types"
@@ -44,13 +45,12 @@ export function useMessages(channelId: string | null) {
   // SEND MESSAGE
   // ============================================
 
-  const sendMessage = useCallback((content: string, attachments: MessageAttachment[] = []) => {
-    console.log("user object:", user)
+  const sendMessage = useCallback((content: string, attachments: MessageAttachment[] = [], replyTo: string | null = null) => {
   const senderId = user?._id
   if (!channelId || !senderId) return
 
 
-  const clientId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+  const clientId = crypto.randomUUID()
   // const nowIso = new Date().toISOString()
   const now = new Date().toISOString()
   // Match the exact Message interface from types.ts
@@ -68,17 +68,25 @@ export function useMessages(channelId: string | null) {
   isPending: true,
   clientId,
   attachments,
+  replyTo,
 }
 
   dispatch(addMessage({ channelId, message: optimisticMessage }))
 
-  socketGateway.sendMessage({ channelId, content, clientId, attachments })
+  socketGateway.sendMessage({ channelId, content, clientId, attachments, replyTo })
 
   if (isTypingRef.current) {
     socketGateway.stopTyping(channelId)
     isTypingRef.current = false
   }
 }, [channelId, user, dispatch])
+
+  const retryMessage = useCallback((message: Message) => {
+    if (!channelId || !message.clientId || !message.isFailed) return
+    dispatch(markMessagePending({ channelId, clientId: message.clientId }))
+    // Preserve the original clientId: the server returns the original row if a prior attempt succeeded.
+    socketGateway.sendMessage({ channelId, content: message.content, clientId: message.clientId, attachments: message.attachments || [], replyTo: message.replyTo })
+  }, [channelId, dispatch])
 
 
 
@@ -113,6 +121,8 @@ export function useMessages(channelId: string | null) {
     if (!channelId) return
     socketGateway.deleteMessage(messageId)
   }, [channelId])
+  const toggleReaction = useCallback((messageId: string, emoji: string) => socketGateway.toggleReaction(messageId, emoji), [])
+  const togglePin = useCallback((messageId: string) => socketGateway.togglePin(messageId), [])
 
   // ============================================
   // TYPING INDICATOR
@@ -186,6 +196,7 @@ export function useMessages(channelId: string | null) {
   return {
     messages,
     sendMessage,
+    retryMessage,
     
     // Edit
     editingMessageId,
@@ -195,6 +206,8 @@ export function useMessages(channelId: string | null) {
     
     // Delete
     deleteMessage,
+    toggleReaction,
+    togglePin,
     
     // Typing
     handleTyping,

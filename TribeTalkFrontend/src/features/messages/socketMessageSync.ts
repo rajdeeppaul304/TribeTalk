@@ -5,6 +5,7 @@ import {
   replaceMessage,
   editMessage,
   deleteMessage,
+  markMessageFailed,
   addTypingUser,
   removeTypingUser,
 } from "./message.slice"
@@ -138,10 +139,11 @@ export function initializeMessageSync(dispatch: AppDispatch) {
   socketGateway.onError((error) => {
     console.error("❌ Socket error:", error.message)
 
-    // If error relates to a specific message (clientId provided)
-    if (error.clientId) {
-      // Mark the optimistic message as failed
-      // We'll need to get channelId from somewhere - store it when sending
+    if (error.clientId && error.channelId) dispatch(markMessageFailed({ channelId: error.channelId, clientId: error.clientId }))
+  })
+  socketGateway.onNotification((notification) => {
+    if (notification.type === "mention" && "Notification" in window && Notification.permission === "granted") {
+      new Notification("You were mentioned in TribeTalk", { body: "Open TribeTalk to view the message." })
     }
   })
 
@@ -176,4 +178,5 @@ export function cleanupMessageSync() {
   socketGateway.off("error")
   socketGateway.off("connect")
   socketGateway.off("disconnect")
+  socketGateway.off("notification")
 }

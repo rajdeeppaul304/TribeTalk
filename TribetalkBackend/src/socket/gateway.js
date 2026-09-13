@@ -8,6 +8,10 @@ import registerSyncHandlers from "./handlers/sync.handler.js";
 import * as serverService from "../Service/Server.service.js";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { markSocketOffline, markSocketOnline, refreshSocketPresence } from "../config/redis.js";
+import { User } from "../Models/User.model.js";
+import { socketEventMiddleware } from "./event.middleware.js";
+import { metrics } from "../config/metrics.js";
+import { logger } from "../config/logger.js";
 
 const typingUsers = new Map(); // channelId -> Set of userIds
 
@@ -23,10 +27,15 @@ export default function setupGateway(io, redisClients = null) {
     io.use(socketAuthMiddleware);
 
     io.on("connection", async (socket) => {
-        console.log(`✅ Socket connected: ${socket.id} | User: ${socket.user._id}`);
+        logger.info({ socketId: socket.id, userId: socket.user._id }, "Socket connected");
+        metrics.increment("socketConnections"); metrics.increment("activeSockets");
         const userId = socket.user._id.toString();
         socket.join(`user:${userId}`);
-        void markSocketOnline(userId, socket.id);
+        void markSocketOnline(userId, socket.id).then(async (becameOnline) => {
+            if (!becameOnline) return;
+            const serverIds = await serverService.getServerRoomIds(userId);
+            serverIds.forEach((id) => io.to(`server:${id}`).emit("presence_changed", { userId, online: true, lastSeenAt: null }));
+        });
 
         socket.on("presence_heartbeat", () => {
             void refreshSocketPresence(userId, socket.id);
@@ -41,6 +50,7 @@ export default function setupGateway(io, redisClients = null) {
         }
 
         socket.use(channelGuardMiddleware(socket));
+        socket.use(socketEventMiddleware(socket));
         socket.on("error", (err) => {
             socket.emit("error", { message: err.message });
         });
@@ -50,9 +60,12 @@ export default function setupGateway(io, redisClients = null) {
         registerSyncHandlers(io, socket);
 
         socket.on("disconnect", () => {
-            console.log(`❌ Socket disconnected: ${socket.id} | User: ${socket.user._id}`);
+            logger.info({ socketId: socket.id, userId: socket.user._id }, "Socket disconnected");
+            metrics.decrement("activeSockets");
 
             for (const [channelId, users] of typingUsers.entries()) {
+                const timer = users.get(socket.user._id.toString());
+                if (timer) clearTimeout(timer);
                 if (users.delete(socket.user._id.toString())) {
                     io.to(channelId).emit("user_typing_stop", {
                         channelId,
@@ -60,7 +73,13 @@ export default function setupGateway(io, redisClients = null) {
                     });
                 }
             }
-            void markSocketOffline(userId, socket.id);
+            void markSocketOffline(userId, socket.id).then(async (becameOffline) => {
+                if (!becameOffline) return;
+                const lastSeenAt = new Date();
+                await User.findByIdAndUpdate(userId, { $set: { lastSeenAt } });
+                const serverIds = await serverService.getServerRoomIds(userId);
+                serverIds.forEach((id) => io.to(`server:${id}`).emit("presence_changed", { userId, online: false, lastSeenAt }));
+            });
         });
     });
 }

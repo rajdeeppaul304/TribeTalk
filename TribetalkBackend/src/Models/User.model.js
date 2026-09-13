@@ -49,6 +49,12 @@ const userSchema = new Schema(
             maxlength: 300,
             default: ""
         },
+        lastSeenAt: { type: Date, default: null },
+        notificationPreferences: {
+            browser: { type: Boolean, default: true },
+            mentions: { type: Boolean, default: true },
+            unread: { type: Boolean, default: true }
+        },
          refreshToken: {
             type: String
         }

@@ -33,6 +33,7 @@ export const updateProfileSchema = z.object({
     displayName: z.string().trim().min(1).max(50).optional(),
     avatar: z.union([z.string().url().max(2048), z.literal("")]).optional(),
     bio: z.string().trim().max(300).optional(),
+    notificationPreferences: z.object({ browser: z.boolean().optional(), mentions: z.boolean().optional(), unread: z.boolean().optional() }).optional(),
   }).refine((body) => Object.keys(body).length > 0, "Provide at least one field to update"),
   params: z.object({}),
   query: z.object({}),
@@ -70,6 +71,14 @@ export const joinServerSchema = z.object({
   params: z.object({ id: objectId }),
   query: z.object({}),
 });
+
+export const createInviteSchema = z.object({
+  body: z.object({ expiresInHours: z.coerce.number().int().min(1).max(24 * 30).optional(), maxUses: z.coerce.number().int().min(1).max(10000).optional() }),
+  params: z.object({ id: objectId }), query: z.object({}),
+});
+export const inviteIdParamsSchema = z.object({ body: z.object({}), params: z.object({ id: objectId, inviteId: objectId }), query: z.object({}) });
+export const memberRoleSchema = z.object({ body: z.object({ role: z.enum(["member", "moderator"]) }), params: z.object({ id: objectId, memberId: objectId }), query: z.object({}) });
+export const memberIdParamsSchema = z.object({ body: z.object({}), params: z.object({ id: objectId, memberId: objectId }), query: z.object({}) });
 
 export const createChannelSchema = z.object({
   body: z.object({
@@ -117,6 +126,7 @@ export const messageIdParamsSchema = z.object({
   params: z.object({ messageId: objectId }),
   query: z.object({}),
 });
+export const channelMessageIdParamsSchema = z.object({ body: z.object({}), params: z.object({ channelId: objectId, messageId: objectId }), query: z.object({}) });
 
 export const editMessageSchema = z.object({
   body: z.object({ content: z.string().trim().min(1).max(2000) }),

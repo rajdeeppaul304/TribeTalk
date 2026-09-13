@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import * as userRepo from "../Repository/User.repository.js";
 import { ApiError } from "../Utils/ApiError.js";
+import { getUsersPresence } from "../config/redis.js";
 
 export const generateAccessAndRefreshTokens = async (userId) => {
     const user = await userRepo.findUserById(userId);
@@ -77,9 +78,11 @@ export const getPublicProfile = async (userId) => {
     if (!user) {
         throw new ApiError(404, "User not found");
     }
+    const presence = await getUsersPresence([user._id]);
     return {
         ...user,
         displayName: user.displayName || user.username,
+        online: presence[user._id.toString()] || false,
     };
 };
 

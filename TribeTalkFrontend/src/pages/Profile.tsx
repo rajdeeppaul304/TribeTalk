@@ -17,12 +17,14 @@ export default function Profile() {
   const [avatar, setAvatar] = useState("")
   const [bio, setBio] = useState("")
   const [message, setMessage] = useState("")
+  const [browserNotifications, setBrowserNotifications] = useState(false)
 
   useEffect(() => {
     if (!profile) return
     setDisplayName(profile.displayName || profile.username)
     setAvatar(profile.avatar || "")
     setBio(profile.bio || "")
+    setBrowserNotifications(Boolean(user?.notificationPreferences?.browser))
   }, [profile])
 
   if (isLoading) return <div className="min-h-screen bg-gray-900 p-8 text-gray-300">Loading profile...</div>
@@ -32,7 +34,7 @@ export default function Profile() {
     event.preventDefault()
     setMessage("")
     try {
-      const updatedUser = await updateProfile({ displayName, avatar, bio }).unwrap()
+      const updatedUser = await updateProfile({ displayName, avatar, bio, notificationPreferences: { ...user?.notificationPreferences, browser: browserNotifications } }).unwrap()
       if (token) setAuth(updatedUser, token)
       await refetch()
       setMessage("Profile saved.")
@@ -71,6 +73,7 @@ export default function Profile() {
           <div>
             <h1 className="text-2xl font-bold">{profile.displayName || profile.username}</h1>
             <p className="text-gray-400">@{profile.username}</p>
+            {!isOwnProfile && <p className={`mt-1 text-sm ${profile.online ? "text-green-300" : "text-gray-400"}`}>{profile.online ? "● Online" : profile.lastSeenAt ? `Last seen ${new Date(profile.lastSeenAt).toLocaleString()}` : "Offline"}</p>}
           </div>
         </div>
 
@@ -88,6 +91,7 @@ export default function Profile() {
             <label className="block text-sm">About me
               <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={300} rows={4} className="mt-1 w-full rounded bg-gray-700 p-2 text-white" placeholder="Tell your communities a little about yourself." />
             </label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={browserNotifications} onChange={(event) => { setBrowserNotifications(event.target.checked); if (event.target.checked && "Notification" in window) void Notification.requestPermission() }} /> Browser notifications for mentions</label>
             {message && <p className={message === "Profile saved." ? "text-green-300" : "text-red-300"}>{message}</p>}
             <button type="submit" disabled={isSaving || isUploading} className="rounded bg-blue-600 px-4 py-2 font-medium hover:bg-blue-500 disabled:opacity-50">
               {isUploading ? "Uploading..." : isSaving ? "Saving..." : "Save profile"}

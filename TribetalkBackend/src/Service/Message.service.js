@@ -4,6 +4,11 @@ import { checkChannelAccess } from "./Permission.service.js";
 import { ApiError } from "../Utils/ApiError.js";
 import { findUserAccessibleChannelIds } from "../Repository/Server.repository.js";
 import { indexMessage, removeMessageFromIndex } from "./Search.service.js";
+import { Channel } from "../Models/Channel.model.js";
+import { Server } from "../Models/Server.model.js";
+import { canModerate } from "./Permission.service.js";
+import { AuditLog } from "../Models/AuditLog.model.js";
+import { Message } from "../Models/Message.model.js";
 
 /**
  * Internal guard for domain-level authorization
@@ -18,7 +23,7 @@ const assertChannelAccess = async (userId, channelId) => {
 /**
  * Add a new message (Guarded)
  */
-export const addMessage = async ({ content, channelId, UserId, clientId = null, isSystemMessage = false, attachments = [] }) => {
+export const addMessage = async ({ content, channelId, UserId, clientId = null, isSystemMessage = false, attachments = [], replyTo = null }) => {
   if (!content?.trim() && attachments.length === 0 && !isSystemMessage) {
     throw new ApiError(400, "Message content or an attachment is required");
   }
@@ -30,6 +35,12 @@ export const addMessage = async ({ content, channelId, UserId, clientId = null, 
   // ✅ Domain-level membership verification
   await assertChannelAccess(UserId, channelId);
 
+  let threadRoot = null;
+  if (replyTo) {
+    const parent = await Message.findOne({ _id: replyTo, channel: channelId, deletedAt: null }).select("threadRoot").lean();
+    if (!parent) throw new ApiError(404, "The message you replied to was not found in this channel");
+    threadRoot = parent.threadRoot || parent._id;
+  }
   const savedMessage = await messageRepo.createMessage({
     content: content?.trim() || "",
     sender: UserId,
@@ -37,6 +48,8 @@ export const addMessage = async ({ content, channelId, UserId, clientId = null, 
     clientId,
     isSystemMessage,
     attachments,
+    replyTo,
+    threadRoot,
   });
 
   if (!savedMessage) {
@@ -47,6 +60,36 @@ export const addMessage = async ({ content, channelId, UserId, clientId = null, 
   void indexMessage(savedMessage);
 
   return savedMessage;
+};
+
+export const toggleReaction = async ({ messageId, emoji, userId }) => {
+  const message = await Message.findById(messageId);
+  if (!message || message.deletedAt) throw new ApiError(404, "Message not found");
+  await assertChannelAccess(userId, message.channel);
+  const reaction = message.reactions.find((item) => item.emoji === emoji);
+  const alreadyReacted = reaction?.users.some((id) => id.toString() === userId.toString());
+  if (reaction && alreadyReacted) reaction.users.pull(userId);
+  else if (reaction) reaction.users.addToSet(userId);
+  else message.reactions.push({ emoji, users: [userId] });
+  message.reactions = message.reactions.filter((item) => item.users.length > 0);
+  await message.save();
+  await message.populate("sender", "username displayName avatar");
+  return message;
+};
+
+export const togglePin = async ({ messageId, userId }) => {
+  const message = await Message.findById(messageId);
+  if (!message || message.deletedAt) throw new ApiError(404, "Message not found");
+  const channel = await Channel.findById(message.channel).select("server").lean();
+  const server = channel && await Server.findById(channel.server).select("owner moderators members").lean();
+  if (!server || !canModerate(server, userId)) throw new ApiError(403, "Owner or moderator permission required to pin messages");
+  const pinned = !message.pinnedAt;
+  message.pinnedAt = pinned ? new Date() : null;
+  message.pinnedBy = pinned ? userId : null;
+  await message.save();
+  await message.populate("sender", "username displayName avatar");
+  void AuditLog.create({ server: server._id, actor: userId, action: pinned ? "message.pinned" : "message.unpinned", targetId: messageId });
+  return message;
 };
 
 /**
@@ -67,6 +110,13 @@ export const getMissedMessages = async (channelId, sinceSequence, userId = null)
     await assertChannelAccess(userId, channelId);
   }
   return await messageRepo.getMessagesSinceSequence(channelId, sinceSequence);
+};
+
+export const getThread = async ({ channelId, rootId, userId }) => {
+  await assertChannelAccess(userId, channelId);
+  const root = await Message.findOne({ _id: rootId, channel: channelId }).select("threadRoot").lean();
+  if (!root) throw new ApiError(404, "Thread not found");
+  return messageRepo.getThreadMessages(channelId, root.threadRoot || root._id);
 };
 
 /**
@@ -103,14 +153,24 @@ export const deleteMessage = async (messageId, userId) => {
     throw new ApiError(404, "Message not found");
   }
   await assertChannelAccess(userId, message.channel);
+  const channel = await Channel.findById(message.channel).select("server").lean();
+  const server = channel ? await Server.findById(channel.server).select("owner moderators members").lean() : null;
+  const isAuthor = message.sender?.toString() === userId.toString();
+  const isModerator = server && canModerate(server, userId);
+  if (!isAuthor && !isModerator) {
+    throw new ApiError(403, "Only the author or a server moderator can delete this message");
+  }
 
-  const deletedMessage = await messageRepo.softDeleteMessage(messageId, userId);
+  const deletedMessage = await messageRepo.softDeleteMessage(messageId);
 
   if (!deletedMessage) {
     throw new ApiError(404, "Message not found or you do not have permission to delete it");
   }
 
   void removeMessageFromIndex(deletedMessage._id);
+  if (!isAuthor && server) {
+    void AuditLog.create({ server: server._id, actor: userId, action: "message.removed", targetId: messageId, metadata: { channelId: message.channel.toString() } });
+  }
 
   return deletedMessage;
 };

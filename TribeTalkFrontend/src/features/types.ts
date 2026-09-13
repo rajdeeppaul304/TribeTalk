@@ -19,20 +19,26 @@ export interface ChannelState {
 }
 
 export type ServerRole = "owner" | "moderator" | "member"
+export interface ServerMember { _id: string; username: string }
 
 export interface ServerSummary {
   _id: string
   name: string
   description?: string
-  owner?: string
+  owner?: string | ServerMember
   inviteCode?: string
+  role?: ServerRole
 }
 
 export interface ServerFull extends ServerSummary {
-  moderators: string[]
-  members: string[]
+  role: ServerRole
+  owner: ServerMember
+  moderators: ServerMember[]
+  members: ServerMember[]
   channels: Channel[]
 }
+
+export interface Invite { _id: string; code: string; expiresAt: string | null; maxUses: number | null; uses: number; revokedAt: string | null; createdAt: string }
 
 // UPDATED: Complete message type with all backend fields
 export interface Message {
@@ -53,6 +59,10 @@ export interface Message {
   isPending?: boolean           // Local-only flag for optimistic updates
   isFailed?: boolean            // Local-only flag for failed sends
   attachments?: MessageAttachment[]
+  replyTo?: string | null
+  threadRoot?: string | null
+  reactions?: { emoji: string; userIds: string[] }[]
+  pinnedAt?: string | null
 }
 
 export interface MessageAttachment {

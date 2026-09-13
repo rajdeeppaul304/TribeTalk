@@ -36,6 +36,11 @@ export const getMessageHistory = asyncHandler(async (req, res) => {
   );
 });
 
+export const getThread = asyncHandler(async (req, res) => {
+  const messages = await messageService.getThread({ channelId: req.params.channelId, rootId: req.params.messageId, userId: req.user._id });
+  return res.json(new ApiResponse(200, messages, "Thread retrieved successfully"));
+});
+
 /**
  * POST /api/v1/channels/:channelId/mark-read
  */

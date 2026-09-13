@@ -46,7 +46,7 @@ class SocketGateway {
   // Message Events
   // ======================
 
-  sendMessage(payload: { channelId: string; content: string; clientId?: string; attachments?: MessageAttachment[] }) {
+  sendMessage(payload: { channelId: string; content: string; clientId?: string; attachments?: MessageAttachment[]; replyTo?: string | null }) {
     const socket = this.getSocket()
     socket.emit("send_message", payload)
   }
@@ -60,6 +60,8 @@ class SocketGateway {
     const socket = this.getSocket()
     socket.emit("delete_message", { messageId })
   }
+  toggleReaction(messageId: string, emoji: string) { this.getSocket().emit("toggle_reaction", { messageId, emoji }) }
+  togglePin(messageId: string) { this.getSocket().emit("toggle_pin", { messageId }) }
 
   // ======================
   // Typing Events
@@ -137,6 +139,7 @@ class SocketGateway {
   onSyncMessages(handler: (data: { channelId: string; messages: Message[] }) => void) {
     this.socket?.on("sync_messages", handler)
   }
+  onNotification(handler: (data: { type: "mention" | "unread"; channelId: string; messageId: string }) => void) { this.socket?.on("notification", handler) }
 
   onChannelCreated(handler: (data: { channel: Channel; serverId: string }) => void) {
     this.socket?.on("channel_created", handler)
@@ -162,7 +165,7 @@ class SocketGateway {
   }
 
 
-  onError(handler: (data: { message: string; clientId?: string }) => void) {
+  onError(handler: (data: { message: string; clientId?: string; channelId?: string }) => void) {
     this.socket?.on("error", handler)
   }
   onUnreadCounts(handler: (data: { [channelId: string]: number }) => void) {

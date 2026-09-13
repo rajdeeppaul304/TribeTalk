@@ -34,5 +34,9 @@ export function formatMessageDTO(message) {
         isSystemMessage: Boolean(message.isSystemMessage),
         clientId: message.clientId || null,
         attachments: message.attachments || []
+        ,replyTo: message.replyTo?.toString?.() || message.replyTo || null
+        ,threadRoot: message.threadRoot?.toString?.() || message.threadRoot || null
+        ,reactions: (message.reactions || []).map((reaction) => ({ emoji: reaction.emoji, userIds: (reaction.users || []).map((id) => id.toString()) }))
+        ,pinnedAt: message.pinnedAt ? new Date(message.pinnedAt).toISOString() : null
     };
 }

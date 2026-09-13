@@ -10,6 +10,8 @@ import { socketGateway } from "../gateway/socket"
 import {copyToClipboard} from "../utils/commonTools"
 import { Link } from "react-router-dom"
 import { useAuth } from "../features/auth/useAuth"
+import ServerManagementPanel from "./ServerManagementPanel"
+import { useGetNotificationsQuery, useMarkNotificationsReadMutation } from "../features/auth/auth.api"
 
 
 
@@ -20,6 +22,9 @@ const LeftSidebar = () => {
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false)
   const unreadCounts = useSelector((state: RootState) => state.channel.unreadCounts)
   const { user } = useAuth()
+  const { data: notifications = [], refetch: refetchNotifications } = useGetNotificationsQuery()
+  const [markNotificationsRead] = useMarkNotificationsReadMutation()
+  const [showNotifications, setShowNotifications] = useState(false)
   const baseUrl=`${window.location.origin}/server/join-server/`
   const activeServer = servers.find((server) => server._id === activeServerId)
   const inviteUrl = activeServer?.inviteCode
@@ -59,6 +64,10 @@ const LeftSidebar = () => {
     >
       📋 Copy
     </button>
+      </div>
+      <div className="mt-2">
+        <button onClick={() => { setShowNotifications(!showNotifications); if (!showNotifications) { const unread = notifications.filter((item) => !item.readAt).map((item) => item._id); if (unread.length) void markNotificationsRead(unread).then(() => refetchNotifications()) } }} className="text-sm text-yellow-200 hover:text-yellow-100">Notifications {notifications.filter((item) => !item.readAt).length ? `(${notifications.filter((item) => !item.readAt).length})` : ""}</button>
+        {showNotifications && <div className="mt-1 max-h-40 overflow-y-auto rounded bg-gray-900 p-2 text-xs">{notifications.length ? notifications.slice(0, 10).map((item) => <div key={item._id} className="border-b border-gray-700 py-1"><span className="text-yellow-300">{item.type === "mention" ? "Mention" : "Unread"}</span> from @{item.actor?.username || "user"}</div>) : <span className="text-gray-400">No notifications.</span>}</div>}
       </div>
       
 
@@ -119,6 +128,7 @@ const LeftSidebar = () => {
           </button>
         )}
       </div>
+      {activeServerId && <ServerManagementPanel serverId={activeServerId} />}
 
       <CreateServerModal
         isOpen={isServerModalOpen}

@@ -31,7 +31,8 @@ export default function registerSyncHandlers(io, socket) {
         try {
             const missedMessages = await messageService.getMissedMessages(
                 channelId,
-                lastReceivedSequence
+                lastReceivedSequence,
+                socket.user._id
             );
 
             socket.emit("sync_messages", {

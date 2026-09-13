@@ -3,6 +3,7 @@ import { ApiError } from "../Utils/ApiError.js";
 import { ApiResponse } from "../Utils/ApiResponse.js";
 import * as userService from "../Service/User.service.js";
 import { env } from "../config/env.js";
+import * as notificationService from "../Service/Notification.service.js";
 
 const cookieOptions = {
     httpOnly: true,
@@ -112,4 +113,14 @@ export const getPublicUserProfile = asyncHandler(async (req, res) => {
     return res.status(200).json(
         new ApiResponse(200, profile, "Public profile fetched successfully")
     );
+});
+
+export const getNotifications = asyncHandler(async (req, res) => {
+    const notifications = await notificationService.listNotifications(req.user._id);
+    return res.json(new ApiResponse(200, notifications, "Notifications retrieved"));
+});
+
+export const markNotificationsRead = asyncHandler(async (req, res) => {
+    await notificationService.markNotificationsRead(req.user._id, req.body.ids || []);
+    return res.json(new ApiResponse(200, null, "Notifications marked as read"));
 });

@@ -1,19 +1,19 @@
 // channel.handler.js
 import * as messageService from "../../Service/Message.service.js";
 import { formatMessageDTO } from "../socket.utils.js";
+import { markTyping, clearTyping } from "../../config/redis.js";
 
 export default function registerChannelHandlers(io, socket, typingUsers) {
     // Join channel
     socket.on("join_channel", async ({ channelId, lastKnownSequence = 0 }) => {
         try {
             console.log(`📥 join_channel: User ${socket.user._id} joining ${channelId}`);
-
-            socket.join(channelId);
-
             const syncData = await messageService.getChannelSyncData(
                 socket.user._id,
                 channelId
             );
+            // Only join after membership authorization succeeds.
+            socket.join(channelId);
 
             socket.emit("sync_state", {
                 channelId,
@@ -46,7 +46,10 @@ export default function registerChannelHandlers(io, socket, typingUsers) {
         socket.leave(channelId);
 
         if (typingUsers.has(channelId)) {
+            const timer = typingUsers.get(channelId).get(socket.user._id.toString());
+            if (timer) clearTimeout(timer);
             typingUsers.get(channelId).delete(socket.user._id.toString());
+            void clearTyping(channelId, socket.user._id.toString());
         }
     });
 
@@ -57,11 +60,19 @@ export default function registerChannelHandlers(io, socket, typingUsers) {
             return; // Silently discard unauthorized or invalid attempts
         }
 
-        if (!typingUsers.has(channelId)) {
-            typingUsers.set(channelId, new Set());
-        }
-
-        typingUsers.get(channelId).add(socket.user._id.toString());
+        if (!typingUsers.has(channelId)) typingUsers.set(channelId, new Map());
+        const users = typingUsers.get(channelId);
+        const userId = socket.user._id.toString();
+        const existingTimer = users.get(userId);
+        if (existingTimer) clearTimeout(existingTimer);
+        const timeout = setTimeout(() => {
+            users.delete(userId);
+            void clearTyping(channelId, userId);
+            socket.to(channelId).emit("user_typing_stop", { channelId, userId });
+            if (users.size === 0) typingUsers.delete(channelId);
+        }, 5_000);
+        users.set(userId, timeout);
+        void markTyping(channelId, userId);
 
         socket.to(channelId).emit("user_typing", {
             channelId,
@@ -76,7 +87,11 @@ export default function registerChannelHandlers(io, socket, typingUsers) {
             return;
         } 
         if (typingUsers.has(channelId)) {
-            typingUsers.get(channelId).delete(socket.user._id.toString());
+            const users = typingUsers.get(channelId);
+            const timer = users.get(socket.user._id.toString());
+            if (timer) clearTimeout(timer);
+            users.delete(socket.user._id.toString());
+            void clearTyping(channelId, socket.user._id.toString());
         }
 
         socket.to(channelId).emit("user_typing_stop", {

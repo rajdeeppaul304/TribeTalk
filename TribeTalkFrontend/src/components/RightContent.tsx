@@ -18,6 +18,7 @@ const RightContent = () => {
   const [isLoadingOlder, setIsLoadingOlder] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [attachmentError, setAttachmentError] = useState("")
+  const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [uploadImage, { isLoading: isUploading }] = useUploadImageMutation()
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -35,6 +36,9 @@ const RightContent = () => {
   const {
     messages,
     sendMessage,
+    retryMessage,
+    toggleReaction,
+    togglePin,
     editingMessageId,
     startEdit,
     cancelEdit,
@@ -108,10 +112,11 @@ const RightContent = () => {
       }
     }
 
-    sendMessage(messageInput.trim(), attachments)
+    sendMessage(messageInput.trim(), attachments, replyTo?.id || null)
     setMessageInput("")
     setSelectedImage(null)
     setAttachmentError("")
+    setReplyTo(null)
 
     // Mark channel as read after sending (you've seen everything up to your message)
     markAsRead()
@@ -192,6 +197,10 @@ const RightContent = () => {
               onSubmitEdit={() => handleSubmitEdit(msg.id)}
               onCancelEdit={handleCancelEdit}
               onDelete={() => deleteMessage(msg.id)}
+              onRetry={() => retryMessage(msg)}
+              onReply={() => setReplyTo(msg)}
+              onReact={(emoji) => toggleReaction(msg.id, emoji)}
+              onPin={() => togglePin(msg.id)}
             />
           ))
         )}
@@ -208,6 +217,7 @@ const RightContent = () => {
 
       {/* Message Input */}
       <form onSubmit={handleSendMessage} className="p-4 bg-gray-800 border-t border-gray-700">
+        {replyTo && <div className="mb-2 flex items-center justify-between rounded bg-gray-700 px-3 py-2 text-sm text-gray-200">Replying to {replyTo.senderUsername || "message"}<button type="button" onClick={() => setReplyTo(null)} className="text-red-300">Cancel</button></div>}
         {selectedImage && <div className="mb-2 flex items-center gap-2 text-sm text-blue-200"><span>Attached: {selectedImage.name}</span><button type="button" onClick={() => setSelectedImage(null)} className="text-red-300 hover:text-red-200">Remove</button></div>}
         {attachmentError && <p className="mb-2 text-sm text-red-300">{attachmentError}</p>}
         <div className="flex gap-2">
@@ -251,6 +261,10 @@ interface MessageItemProps {
   onSubmitEdit: () => void
   onCancelEdit: () => void
   onDelete: () => void
+  onRetry: () => void
+  onReply: () => void
+  onReact: (emoji: string) => void
+  onPin: () => void
 }
 
 const MessageItem = ({
@@ -264,6 +278,10 @@ const MessageItem = ({
   onSubmitEdit,
   onCancelEdit,
   onDelete,
+  onRetry,
+  onReply,
+  onReact,
+  onPin,
 }: MessageItemProps) => {
   const navigate = useNavigate()
   const [showActions, setShowActions] = useState(false)
@@ -348,9 +366,16 @@ const MessageItem = ({
         {showSending && (
           <span className="text-xs text-yellow-500">Sending...</span>
         )}
+        {message.isFailed && <button onClick={onRetry} className="text-xs text-red-300 hover:text-red-200">Failed — retry</button>}
       </div>
 
       {message.content && <p className={`text-gray-200 mt-1 ${message.deletedAt ? "italic text-gray-500" : ""}`}>{message.content}</p>}
+      {message.replyTo && <p className="mt-1 text-xs text-blue-300">↳ Reply in thread</p>}
+      {message.pinnedAt && <p className="mt-1 text-xs text-yellow-300">📌 Pinned</p>}
+      <div className="mt-2 flex flex-wrap gap-1">
+        {(message.reactions || []).map((reaction) => <button key={reaction.emoji} onClick={() => onReact(reaction.emoji)} className="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600">{reaction.emoji} {reaction.userIds.length}</button>)}
+        {!message.deletedAt && <><button onClick={() => onReact("👍")} className="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600">👍</button><button onClick={onReply} className="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600">Reply</button><button onClick={onPin} className="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600">{message.pinnedAt ? "Unpin" : "Pin"}</button></>}
+      </div>
       {message.attachments?.map((attachment) => (
         <a key={attachment.publicId} href={attachment.url} target="_blank" rel="noreferrer" className="mt-2 block w-fit">
           <img src={attachment.url} alt="Message attachment" className="max-h-80 max-w-full rounded object-contain" loading="lazy" />

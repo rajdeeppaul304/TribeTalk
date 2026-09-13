@@ -73,6 +73,10 @@ export const saveServerInviteCode = async (serverId, inviteCode) => {
     );
 };
 
+export const addModerator = async (serverId, userId) => Server.findByIdAndUpdate(serverId, { $addToSet: { moderators: userId, members: userId } }, { new: true });
+export const removeModerator = async (serverId, userId) => Server.findByIdAndUpdate(serverId, { $pull: { moderators: userId } }, { new: true });
+export const removeMember = async (serverId, userId) => Server.findByIdAndUpdate(serverId, { $pull: { members: userId, moderators: userId } }, { new: true });
+
 
 /**
  * Find all channel IDs across servers where the user is an owner, moderator, or member

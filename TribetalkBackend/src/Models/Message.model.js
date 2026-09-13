@@ -57,6 +57,14 @@ const messageSchema = new Schema(
       type: String,
       default: null,
     },
+    replyTo: { type: Types.ObjectId, ref: "Message", default: null, index: true },
+    threadRoot: { type: Types.ObjectId, ref: "Message", default: null, index: true },
+    reactions: [{
+      emoji: { type: String, required: true, maxlength: 32 },
+      users: [{ type: Types.ObjectId, ref: "User" }]
+    }],
+    pinnedAt: { type: Date, default: null },
+    pinnedBy: { type: Types.ObjectId, ref: "User", default: null },
 
     attachments: [{
       url: { type: String, required: true },
@@ -72,7 +80,10 @@ const messageSchema = new Schema(
 
 // Compound index for efficient cursor-based pagination
 messageSchema.index({ channel: 1, sequence: -1 });
+// The same client retry must resolve to the original message, never create a duplicate.
+messageSchema.index({ channel: 1, sender: 1, clientId: 1 }, { unique: true, sparse: true });
 messageSchema.index({ channel: 1, createdAt: -1 });
+messageSchema.index({ channel: 1, threadRoot: 1, sequence: 1 });
 
 // Index for finding messages by ID within a channel (for "after" queries)
 messageSchema.index({ channel: 1, _id: 1 });

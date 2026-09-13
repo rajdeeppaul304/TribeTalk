@@ -105,3 +105,28 @@ export const joinServer = asyncHandler(async (req, res) => {
         new ApiResponse(200, joinedServer, "Joined server successfully")
     );
 });
+
+export const createInvite = asyncHandler(async (req, res) => {
+    const invite = await serverService.createInvite({ serverId: req.params.id, userId: req.user._id, ...req.body });
+    return res.status(201).json(new ApiResponse(201, invite, "Invite created"));
+});
+export const listInvites = asyncHandler(async (req, res) => {
+    const invites = await serverService.listInvites({ serverId: req.params.id, userId: req.user._id });
+    return res.json(new ApiResponse(200, invites, "Invites retrieved"));
+});
+export const revokeInvite = asyncHandler(async (req, res) => {
+    const invite = await serverService.revokeInvite({ serverId: req.params.id, inviteId: req.params.inviteId, userId: req.user._id });
+    return res.json(new ApiResponse(200, invite, "Invite revoked"));
+});
+export const setMemberRole = asyncHandler(async (req, res) => {
+    await serverService.setMemberRole({ serverId: req.params.id, memberId: req.params.memberId, role: req.body.role, userId: req.user._id });
+    return res.json(new ApiResponse(200, null, "Member role updated"));
+});
+export const removeMember = asyncHandler(async (req, res) => {
+    await serverService.removeMember({ serverId: req.params.id, memberId: req.params.memberId, userId: req.user._id });
+    return res.json(new ApiResponse(200, null, "Member removed"));
+});
+export const listAuditLogs = asyncHandler(async (req, res) => {
+    const logs = await serverService.listAuditLogs({ serverId: req.params.id, userId: req.user._id });
+    return res.json(new ApiResponse(200, logs, "Audit log retrieved"));
+});

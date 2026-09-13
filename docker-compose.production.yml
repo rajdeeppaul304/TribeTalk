@@ -1,0 +1,18 @@
+services:
+  frontend:
+    # Docker Compose v2 reset tag removes the local development 8080 mapping.
+    ports: !reset []
+  tls-proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/https.conf:/etc/nginx/templates/default.conf.template:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./certbot-www:/var/www/certbot:ro
+    depends_on:
+      - frontend

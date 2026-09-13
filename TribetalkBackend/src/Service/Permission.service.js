@@ -2,6 +2,16 @@
 import { Channel } from "../Models/Channel.model.js";
 import { Server } from "../Models/Server.model.js";
 
+export const getServerRole = (server, userId) => {
+  const id = userId.toString();
+  if (server.owner.toString() === id) return "owner";
+  if ((server.moderators || []).some((member) => member.toString() === id)) return "moderator";
+  if ((server.members || []).some((member) => member.toString() === id)) return "member";
+  return null;
+};
+
+export const canModerate = (server, userId) => ["owner", "moderator"].includes(getServerRole(server, userId));
+
 export async function checkChannelAccess(userId, channelId) {
     try {
         if (!userId || !channelId) return false;

@@ -8,6 +8,8 @@ export interface User {
   bio?: string
   createdAt?: string
   updatedAt?: string
+  lastSeenAt?: string | null
+  notificationPreferences?: { browser?: boolean; mentions?: boolean; unread?: boolean }
 }
 
 export interface PublicProfile {
@@ -17,6 +19,18 @@ export interface PublicProfile {
   avatar?: string
   bio?: string
   createdAt?: string
+  lastSeenAt?: string | null
+  online?: boolean
+}
+
+export interface AppNotification {
+  _id: string
+  type: "mention" | "unread"
+  channel: string
+  message: string
+  readAt?: string | null
+  createdAt: string
+  actor?: { username?: string }
 }
 
 

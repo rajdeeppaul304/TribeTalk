@@ -3,7 +3,7 @@ import * as messageController from "../Controllers/Message.controller.js";
 import { verifyJWT } from "../Middlewares/Auth.middleware.js";
 import { verifyChannelAccess } from "../Middlewares/ChannelAccess.middleware.js";
 import { validate } from "../Middlewares/Validate.middleware.js";
-import { editMessageSchema, markReadSchema, messageHistorySchema, messageIdParamsSchema } from "../Validation/schemas.js";
+import { channelMessageIdParamsSchema, editMessageSchema, markReadSchema, messageHistorySchema, messageIdParamsSchema } from "../Validation/schemas.js";
 
 const router = express.Router();
 
@@ -15,6 +15,7 @@ router.use(verifyJWT);
 // ============================================
 
 // Get message history for a channel (cursor-based pagination)
+router.get("/:channelId/messages/:messageId/thread", validate(channelMessageIdParamsSchema), verifyChannelAccess, messageController.getThread);
 router.get("/:channelId/messages", validate(messageHistorySchema), verifyChannelAccess, messageController.getMessageHistory);
 
 // Mark channel as read

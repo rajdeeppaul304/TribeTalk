@@ -27,6 +27,10 @@ type BackendMessage = {
   isSystemMessage?: boolean
   clientId?: string | null
   attachments?: MessageAttachment[]
+  replyTo?: string | null
+  threadRoot?: string | null
+  reactions?: { emoji: string; users: string[] }[]
+  pinnedAt?: string | null
 }
 
 export const messageApi = baseApi.injectEndpoints({
@@ -64,6 +68,10 @@ export const messageApi = baseApi.injectEndpoints({
           isSystemMessage: msg.isSystemMessage || false,
           clientId: msg.clientId || undefined,
           attachments: msg.attachments || [],
+          replyTo: msg.replyTo || null,
+          threadRoot: msg.threadRoot || null,
+          reactions: (msg.reactions || []).map((reaction) => ({ emoji: reaction.emoji, userIds: reaction.users || [] })),
+          pinnedAt: msg.pinnedAt || null,
           }
         })
         return {

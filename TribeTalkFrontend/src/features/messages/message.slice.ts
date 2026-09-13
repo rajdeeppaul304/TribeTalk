@@ -187,6 +187,16 @@ const messageSlice = createSlice({
         message.isPending = false
       }
     },
+    markMessagePending(
+      state,
+      action: PayloadAction<{ channelId: string; clientId: string }>
+    ) {
+      const message = state.messagesByChannel[action.payload.channelId]?.find((item) => item.clientId === action.payload.clientId)
+      if (message) {
+        message.isPending = true
+        message.isFailed = false
+      }
+    },
 
     /**
      * Set which message is being edited
@@ -239,6 +249,7 @@ export const {
   editMessage,
   deleteMessage,
   markMessageFailed,
+  markMessagePending,
   setEditingMessage,
   addTypingUser,
   removeTypingUser,

@@ -5,7 +5,11 @@ import { ReadState } from "../Models/ReadState.model.js";
 /**
  * Create message and auto-increment channel sequence
  */
-export const createMessage = async ({ content, sender, channel, clientId = null, isSystemMessage = false, attachments = [] }) => {
+export const createMessage = async ({ content, sender, channel, clientId = null, isSystemMessage = false, attachments = [], replyTo = null, threadRoot = null }) => {
+  if (clientId) {
+    const existing = await Message.findOne({ channel, sender, clientId }).populate("sender", "username displayName avatar");
+    if (existing) return existing;
+  }
   const updatedChannel = await Channel.findByIdAndUpdate(
     channel,
     { 
@@ -19,15 +23,16 @@ export const createMessage = async ({ content, sender, channel, clientId = null,
     return null;
   }
 
-  const message = await Message.create({
-    content,
-    sender,
-    channel,
-    sequence: updatedChannel.messageSequence,
-    clientId,
-    isSystemMessage,
-    attachments,
-  });
+  let message;
+  try {
+    message = await Message.create({ content, sender, channel, sequence: updatedChannel.messageSequence, clientId, isSystemMessage, attachments, replyTo, threadRoot });
+  } catch (error) {
+    // A concurrent retry won the unique client-id race. Return its canonical message.
+    if (error?.code === 11000 && clientId) {
+      return Message.findOne({ channel, sender, clientId }).populate("sender", "username displayName avatar");
+    }
+    throw error;
+  }
 
   await Channel.findOneAndUpdate(
     {
@@ -61,12 +66,12 @@ export const getMessages = async ({ channelId, limit = 50, before = null, after 
   let sortOrder = -1;
 
   if (before) {
-    const beforeMsg = await Message.findById(before).select("sequence").lean();
+    const beforeMsg = await Message.findOne({ _id: before, channel: channelId }).select("sequence").lean();
     if (beforeMsg) {
       query.sequence = { $lt: beforeMsg.sequence };
     }
   } else if (after) {
-    const afterMsg = await Message.findById(after).select("sequence").lean();
+    const afterMsg = await Message.findOne({ _id: after, channel: channelId }).select("sequence").lean();
     if (afterMsg) {
       query.sequence = { $gt: afterMsg.sequence };
       sortOrder = 1;
@@ -79,7 +84,7 @@ export const getMessages = async ({ channelId, limit = 50, before = null, after 
     .populate("sender", "username avatar")
     .lean();
 
-  if (after) {
+  if (before || after) {
     messages.reverse();
   }
 
@@ -100,6 +105,12 @@ export const getMessagesSinceSequence = async (channelId, sinceSequence) => {
     .lean();
 };
 
+export const getThreadMessages = async (channelId, rootId) => Message.find({
+  channel: channelId,
+  $or: [{ _id: rootId }, { threadRoot: rootId }],
+  deletedAt: null,
+}).sort({ sequence: 1 }).populate("sender", "username avatar").lean();
+
 /**
  * Find message by ID (active only)
  */
@@ -116,7 +127,7 @@ export const findMessageByIdAndChannel = async (messageId, channelId) => {
 };
 
 export const findMessageById = async (messageId) => {
-  return await Message.findById(messageId).select("channel deletedAt").lean();
+  return await Message.findById(messageId).select("channel sender deletedAt").lean();
 };
 
 export const deleteMessagesAndReadStatesForChannels = async (channelIds) => {
@@ -147,9 +158,9 @@ export const updateMessageContent = async (messageId, userId, content) => {
 /**
  * Soft delete message by author
  */
-export const softDeleteMessage = async (messageId, userId) => {
+export const softDeleteMessage = async (messageId) => {
   return await Message.findOneAndUpdate(
-    { _id: messageId, sender: userId, deletedAt: null },
+    { _id: messageId, deletedAt: null },
     { 
       $set: { 
         deletedAt: new Date(),

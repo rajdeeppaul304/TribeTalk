@@ -6,6 +6,8 @@ import * as channelService from "../../Service/Channel.service.js";
 import { formatMessageDTO } from "../socket.utils.js";
 import { z } from "zod";
 import { isTrustedCloudinaryAttachment } from "../../config/cloudinary.js";
+import { createMessageNotifications } from "../../Service/Notification.service.js";
+import { metrics } from "../../config/metrics.js";
 
 const attachmentSchema = z.object({
     url: z.string().url(),
@@ -20,6 +22,7 @@ const sendMessageSchema = z.object({
     channelId: z.string().regex(/^[a-f\d]{24}$/i),
     content: z.string().trim().max(2000).optional().default(""),
     clientId: z.string().max(100).nullable().optional(),
+    replyTo: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
     attachments: z.array(attachmentSchema).max(4).optional().default([]),
 }).refine((payload) => payload.content.length > 0 || payload.attachments.length > 0, {
     message: "Message content or an attachment is required",
@@ -33,7 +36,7 @@ export default function registerMessageHandlers(io, socket) {
             if (!parsedPayload.success) {
                 throw new Error("Invalid message payload");
             }
-            const { channelId, content, attachments } = parsedPayload.data;
+            const { channelId, content, attachments, replyTo } = parsedPayload.data;
             if (attachments.some((attachment) => !isTrustedCloudinaryAttachment(attachment))) {
                 throw new Error("Invalid image attachment");
             }
@@ -45,6 +48,7 @@ export default function registerMessageHandlers(io, socket) {
                 UserId: user._id,
                 clientId,
                 attachments,
+                replyTo,
             });
 
             const messageWithUser = {
@@ -57,13 +61,20 @@ export default function registerMessageHandlers(io, socket) {
             };
 
             const messageDTO = formatMessageDTO(messageWithUser);
+            metrics.increment("messagesSent");
 
+            // The sender receives its clientId as an acknowledgement; peers do not.
             socket.emit("new_message", messageDTO);
 
             socket.to(channelId).emit("new_message", {
                 ...messageDTO,
                 clientId: null
             });
+            const notifications = await createMessageNotifications({ message: savedMessage, senderId: user._id }).catch((error) => {
+                console.error("Failed to create notifications:", error.message);
+                return [];
+            });
+            notifications.forEach((notification) => io.to(`user:${notification.recipient}`).emit("notification", notification));
 
             // 🔧 FIX: scope to the server room, not a global broadcast
             const serverId = await channelService.channelActivity({ channelId });
@@ -75,9 +86,26 @@ export default function registerMessageHandlers(io, socket) {
             console.error("❌ Error in send_message:", error);
             socket.emit("error", {
                 message: "Failed to send message",
-                clientId
+                clientId,
+                channelId: parsedPayload.success ? parsedPayload.data.channelId : undefined,
             });
         }
+    });
+
+    socket.on("toggle_reaction", async ({ messageId, emoji }) => {
+        try {
+            if (!/^[a-f\d]{24}$/i.test(messageId || "") || typeof emoji !== "string" || !emoji.trim() || emoji.length > 32) throw new Error("Invalid reaction");
+            const message = await messageService.toggleReaction({ messageId, emoji: emoji.trim(), userId: socket.user._id });
+            io.to(message.channel.toString()).emit("message_updated", formatMessageDTO(message));
+        } catch (error) { socket.emit("error", { message: error.message || "Failed to update reaction" }); }
+    });
+
+    socket.on("toggle_pin", async ({ messageId }) => {
+        try {
+            if (!/^[a-f\d]{24}$/i.test(messageId || "")) throw new Error("Invalid message");
+            const message = await messageService.togglePin({ messageId, userId: socket.user._id });
+            io.to(message.channel.toString()).emit("message_updated", formatMessageDTO(message));
+        } catch (error) { socket.emit("error", { message: error.message || "Failed to update pin" }); }
     });
 
 
