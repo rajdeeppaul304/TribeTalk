@@ -2,12 +2,11 @@ import { asyncHandler } from "../Utils/asyncHandler.js";
 import { ApiError } from "../Utils/ApiError.js";
 import { ApiResponse } from "../Utils/ApiResponse.js";
 import * as userService from "../Service/User.service.js";
-
-const isProduction = process.env.NODE_ENV === "production";
+import { env } from "../config/env.js";
 
 const cookieOptions = {
     httpOnly: true,
-    secure: isProduction,
+    secure: env.COOKIE_SECURE,
     sameSite: "lax",
     path: "/"
 };

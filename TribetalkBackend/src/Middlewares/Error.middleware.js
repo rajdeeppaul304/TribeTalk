@@ -11,5 +11,6 @@ export const errorHandler = (err, _req, res, _next) => {
     data: null,
     message,
     success: false,
+    errors: err.errors || [],
   });
 };
