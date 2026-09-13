@@ -1,147 +1,16 @@
-// LeftSidebar.tsx
 import { useState } from "react"
+import { Bell, ChevronLeft, ChevronRight, Hash, MessageCircle, Plus, Settings, SlidersHorizontal, UserRound } from "lucide-react"
+import { Link } from "react-router-dom"
+import { useSelector } from "react-redux"
 import { useServer } from "../hooks/useServer"
 import { useChannel } from "../hooks/useChannel"
+import type { RootState } from "../app/store"
+import { socketGateway } from "../gateway/socket"
+import { useAuth } from "../features/auth/useAuth"
+import { useGetNotificationsQuery, useMarkNotificationsReadMutation } from "../features/auth/auth.api"
 import CreateServerModal from "./CreateServerModal"
 import CreateChannelModal from "./CreateChannelModal"
-import { useSelector } from "react-redux";
-import type { RootState } from "../app/store"; // adjust path to your store
-import { socketGateway } from "../gateway/socket"
-import {copyToClipboard} from "../utils/commonTools"
-import { Link } from "react-router-dom"
-import { useAuth } from "../features/auth/useAuth"
 import ServerManagementPanel from "./ServerManagementPanel"
-import { useGetNotificationsQuery, useMarkNotificationsReadMutation } from "../features/auth/auth.api"
-
-
-
-const LeftSidebar = () => {
-  const { servers, activeServerId, selectServer, isLoading: serversLoading } = useServer()
-  const { channels, selectChannel, isLoading: channelsLoading, refetchChannels } = useChannel(activeServerId)
-  const [isServerModalOpen, setIsServerModalOpen] = useState(false)
-  const [isChannelModalOpen, setIsChannelModalOpen] = useState(false)
-  const unreadCounts = useSelector((state: RootState) => state.channel.unreadCounts)
-  const { user } = useAuth()
-  const { data: notifications = [], refetch: refetchNotifications } = useGetNotificationsQuery()
-  const [markNotificationsRead] = useMarkNotificationsReadMutation()
-  const [showNotifications, setShowNotifications] = useState(false)
-  const baseUrl=`${window.location.origin}/server/join-server/`
-  const activeServer = servers.find((server) => server._id === activeServerId)
-  const inviteUrl = activeServer?.inviteCode
-    ? `${baseUrl}${activeServer._id}?invite=${encodeURIComponent(activeServer.inviteCode)}`
-    : null
-  // const activeChannelId = useSelector(
-  //     (state: RootState) => state.channel.activeChannelId
-  //   )
-
-
-  console.log("inreadcounsssssssss",unreadCounts)
-  console.log(activeServerId)
-
-
-
-  
-
-
-
-  return (
-    <div className="w-64 h-screen bg-gray-800 text-white p-4">
-      <div className="flex gap-2 justify-evenly">
-        <div className="flex flex-col gap-1"><Link to={user ? `/profile/${user._id}` : "/home"} className="text-xl font-bold hover:text-blue-300">My Profile</Link><Link to="/search" className="text-sm text-blue-300 hover:text-blue-200">Search messages</Link></div>
-      <button onClick={() => inviteUrl && copyToClipboard(inviteUrl)}
-      disabled={!inviteUrl}
-      className="
-        flex items-center gap-2 
-        bg-blue-600 hover:bg-blue-700
-        text-white font-medium
-        px-4 py-1
-        rounded-lg
-        shadow-md hover:shadow-lg
-        transition-all duration-200
-        active:scale-95
-        focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50
-      "
-    >
-      📋 Copy
-    </button>
-      </div>
-      <div className="mt-2">
-        <button onClick={() => { setShowNotifications(!showNotifications); if (!showNotifications) { const unread = notifications.filter((item) => !item.readAt).map((item) => item._id); if (unread.length) void markNotificationsRead(unread).then(() => refetchNotifications()) } }} className="text-sm text-yellow-200 hover:text-yellow-100">Notifications {notifications.filter((item) => !item.readAt).length ? `(${notifications.filter((item) => !item.readAt).length})` : ""}</button>
-        {showNotifications && <div className="mt-1 max-h-40 overflow-y-auto rounded bg-gray-900 p-2 text-xs">{notifications.length ? notifications.slice(0, 10).map((item) => <div key={item._id} className="border-b border-gray-700 py-1"><span className="text-yellow-300">{item.type === "mention" ? "Mention" : "Unread"}</span> from @{item.actor?.username || "user"}</div>) : <span className="text-gray-400">No notifications.</span>}</div>}
-      </div>
-      
-
-      {/* 🔹 Servers */}
-      <div className="mb-6">
-        {serversLoading && <p className="text-sm text-gray-400">Loading servers...</p>}
-
-        {servers.map((server) => (
-          <button
-            key={server._id}
-            onClick={() => {selectServer(server._id);socketGateway.getUnreadCounts()}
-              
-            }
-            
-            className={`block w-full text-left p-2 rounded ${activeServerId === server._id ? "bg-gray-700" : ""
-              }`}
-          >
-            {server.name}
-          </button>
-        ))}
-
-        <button
-          onClick={() => setIsServerModalOpen(true)}
-          className="mt-2 w-full p-2 bg-green-600 rounded hover:bg-green-500"
-        >
-          + Create Server
-        </button>
-      </div>
-
-      {/* 🔹 Channels */}
-      <div>
-        {channelsLoading ? (
-          <p className="text-sm text-gray-400">Loading channels...</p>
-        ) : (
-          channels.map((channel) => (
-            <button
-              key={channel._id}
-              onClick={() => selectChannel(channel._id)}
-              className="flex justify-between w-full text-left p-2 hover:bg-gray-700"
-            >
-              <span>#{channel.name}</span>
-              {unreadCounts[channel._id] > 0 &&  (
-                <span className="ml-2 text-xs bg-red-600 px-2 rounded-full">
-                  {unreadCounts[channel._id]}
-                </span>
-              )}
-            </button>
-          ))
-        )}
-
-        {/* Create Channel Button */}
-        {activeServerId && (
-          <button
-            onClick={() => setIsChannelModalOpen(true)}
-            className="mt-2 w-full p-2 bg-blue-600 rounded hover:bg-blue-500"
-          >
-            + Create Channel
-          </button>
-        )}
-      </div>
-      {activeServerId && <ServerManagementPanel serverId={activeServerId} />}
-
-      <CreateServerModal
-        isOpen={isServerModalOpen}
-        onClose={() => setIsServerModalOpen(false)}
-      />
-      <CreateChannelModal
-        isOpen={isChannelModalOpen}
-        onClose={() => setIsChannelModalOpen(false)}
-        serverId={activeServerId!} // guaranteed to exist
-        onChannelCreated={() => refetchChannels?.()} // refresh channels after creation
-      />
-    </div>
-  )
-}
-
-export default LeftSidebar
+import Modal from "./Modal"
+import { copyToClipboard } from "../utils/commonTools"
+export default function LeftSidebar(){const {servers,activeServerId,selectServer}=useServer();const {channels,selectChannel,refetchChannels}=useChannel(activeServerId);const unread=useSelector((s:RootState)=>s.channel.unreadCounts);const {user}=useAuth();const [collapsed,setCollapsed]=useState(false);const [createServer,setCreateServer]=useState(false);const [createChannel,setCreateChannel]=useState(false);const [manage,setManage]=useState(false);const [invite,setInvite]=useState(false);const [notificationsOpen,setNotificationsOpen]=useState(false);const {data:notifications=[]}=useGetNotificationsQuery();const [markRead]=useMarkNotificationsReadMutation();const active=servers.find(s=>s._id===activeServerId);const inviteUrl=active?.inviteCode?`${window.location.origin}/server/join-server/${active._id}?invite=${encodeURIComponent(active.inviteCode)}`:"";const mentionCount=notifications.filter(n=>!n.readAt&&n.type==="mention").length;return <aside className={`${collapsed?"w-[72px]":"w-[280px]"} relative flex h-screen shrink-0 flex-col border-r soft-border bg-panel transition-[width] duration-200`}><div className="flex h-16 items-center gap-3 border-b soft-border px-4"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-ink"><MessageCircle size={20}/></div>{!collapsed&&<span className="font-semibold tracking-tight">TribeTalk</span>}<button className="icon-button ml-auto" onClick={()=>setCollapsed(!collapsed)} aria-label="Collapse sidebar">{collapsed?<ChevronRight size={18}/>:<ChevronLeft size={18}/>}</button></div><div className="scrollbar flex-1 overflow-y-auto p-3">{!collapsed&&<div className="mb-4 flex items-center justify-between px-2"><span className="text-xs font-medium uppercase tracking-wider text-[#899493]">Your servers</span><button className="icon-button" onClick={()=>setCreateServer(true)}><Plus size={17}/></button></div>}<div className="space-y-1">{servers.map(server=><button key={server._id} title={server.name} onClick={()=>{selectServer(server._id);socketGateway.getUnreadCounts()}} className={`${activeServerId===server._id?"bg-accent text-ink":"text-[#c0c8c7] hover:bg-white/6"} flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm`}><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/8 font-semibold">{server.name.slice(0,1).toUpperCase()}</span>{!collapsed&&<span className="truncate">{server.name}</span>}</button>)}</div>{activeServerId&&!collapsed&&<><div className="mt-6 mb-2 flex items-center justify-between px-2"><span className="text-xs font-medium uppercase tracking-wider text-[#899493]">Text channels</span><button className="icon-button" onClick={()=>setCreateChannel(true)}><Plus size={16}/></button></div><div className="space-y-1">{channels.map(channel=><button key={channel._id} onClick={()=>selectChannel(channel._id)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#aeb9b8] hover:bg-white/6 hover:text-paper"><Hash size={16}/><span className="truncate">{channel.name}</span>{unread[channel._id]>0&&<span className="ml-auto rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-ink">{unread[channel._id]}</span>}</button>)}</div><button className="mt-4 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#aeb9b8] hover:bg-white/6" onClick={()=>setManage(true)}><SlidersHorizontal size={16}/>Manage server</button></>}</div><div className="border-t soft-border p-3"><div className="flex items-center gap-2"><Link to={user ? `/profile/${user._id}` : "/home"} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg p-2 hover:bg-white/6"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent"><UserRound size={16}/></div>{!collapsed&&<span className="truncate text-sm font-medium">{user?.displayName||user?.username||"Profile"}</span>}</Link>{!collapsed&&<><Link className="icon-button" to="/settings" title="Settings"><Settings size={17}/></Link><button className="icon-button relative" onClick={()=>{setNotificationsOpen(true);const ids=notifications.filter(n=>!n.readAt).map(n=>n._id);if(ids.length)void markRead(ids)}} title="Notifications"><Bell size={17}/>{mentionCount>0&&<span className="absolute -right-1 -top-1 rounded-full bg-accent px-1 text-[10px] font-bold text-ink">{mentionCount}</span>}</button></>}</div></div><CreateServerModal isOpen={createServer} onClose={()=>setCreateServer(false)}/><CreateChannelModal isOpen={createChannel} onClose={()=>setCreateChannel(false)} serverId={activeServerId!} onChannelCreated={refetchChannels}/>{activeServerId&&<ServerManagementPanel serverId={activeServerId} open={manage} onClose={()=>setManage(false)}/>}<Modal open={invite} onClose={()=>setInvite(false)} title="Invite people"><p className="mb-4 text-sm text-[#aeb9b8]">Share this link to let people join {active?.name}.</p><button className="primary-button w-full" onClick={()=>inviteUrl&&copyToClipboard(inviteUrl)}>Copy invite link</button></Modal><Modal open={notificationsOpen} onClose={()=>setNotificationsOpen(false)} title="Notifications"><div className="max-h-80 space-y-2 overflow-y-auto scrollbar">{notifications.length?notifications.slice(0,20).map(n=><div className="rounded-lg bg-ink p-3 text-sm" key={n._id}><span className="text-accent">@{n.actor?.username||"user"}</span> {n.type==="mention"?"mentioned you":"sent a message"}</div>):<p className="text-sm text-[#899493]">You are all caught up.</p>}</div></Modal>{activeServerId&&!collapsed&&<button className="absolute right-4 top-[76px] hidden" onClick={()=>setInvite(true)}>Invite</button>}</aside>}

@@ -11,8 +11,9 @@ import { apiLimiter } from "./Middlewares/RateLimit.middleware.js"
 import { openapiSpecification } from "./config/openapi.js"
 import { isRedisReady } from "./config/redis.js"
 import { isElasticsearchReady } from "./config/elasticsearch.js"
-import { logger } from "./config/logger.js"
+import { getRecentLogs, logger } from "./config/logger.js"
 import { metrics } from "./config/metrics.js"
+import { clearAdminSession, createAdminSession, requireAdminSession } from "./Middlewares/Admin.middleware.js"
 
 const app = express()
 
@@ -57,9 +58,17 @@ app.get("/api/health", (_req, res) => {
     })
 })
 
-app.get("/api/admin/metrics", (req, res) => {
-    if (!env.METRICS_TOKEN || req.header("x-metrics-token") !== env.METRICS_TOKEN) return res.status(404).json({ message: "Not found" })
+app.post("/api/admin/login", (req, res) => {
+    if (!env.ADMIN_PASSWORD || req.body?.password !== env.ADMIN_PASSWORD) return res.status(401).json({ message: "Invalid admin password" })
+    createAdminSession(res)
+    return res.json({ status: "ok" })
+})
+app.post("/api/admin/logout", (_req, res) => { clearAdminSession(res); return res.status(204).end() })
+app.get("/api/admin/metrics", requireAdminSession, (_req, res) => {
     return res.json({ status: "ok", metrics: metrics.snapshot() })
+})
+app.get("/api/admin/logs", requireAdminSession, (req, res) => {
+    return res.json({ status: "ok", logs: getRecentLogs(req.query.limit) })
 })
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapiSpecification, { explorer: true }))

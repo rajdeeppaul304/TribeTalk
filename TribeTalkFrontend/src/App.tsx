@@ -14,6 +14,8 @@ import Register from "./pages/Register"
 import Home from "./pages/Home"
 import Profile from "./pages/Profile"
 import Search from "./pages/Search"
+import Settings from "./pages/Settings"
+import Admin from "./pages/Admin"
 
 function App() {
   // const { isAuthenticated, token } = useAuth()
@@ -76,6 +78,8 @@ function App() {
         element={isLoggedIn ? <Profile /> : <Navigate to="/login" replace />}
       />
       <Route path="/search" element={isLoggedIn ? <Search /> : <Navigate to="/login" replace />} />
+      <Route path="/settings" element={isLoggedIn ? <Settings /> : <Navigate to="/login" replace />} />
+      <Route path="/admin" element={isLoggedIn ? <Admin /> : <Navigate to="/login" replace />} />
 
       {/* Fallback */}
       <Route

@@ -53,7 +53,7 @@ MongoDB and Redis data persist in the `mongo-data` and `redis-data` Docker volum
 
 - Deploy using a domain you control and HTTPS; then add its URL to your README.
 - Create a separate low-privilege demo account manually after deployment. Do not commit its password or API tokens—list credentials only where you deliberately share the demo.
-- Add `METRICS_TOKEN` to the backend environment. `GET /api/admin/metrics` requires that value in the `X-Metrics-Token` header and reports request/error totals, active socket users, socket connections, and message throughput.
+- Add a strong `ADMIN_PASSWORD` to the backend environment. The `/admin` page sends it once to the backend and receives a two-hour, HTTP-only admin session cookie; the password is never included in frontend code. The dashboard reports request/error totals, active socket users, socket connections, message throughput, service health, and process uptime.
 - Keep production logs as JSON (`LOG_LEVEL=info`); request IDs are returned in `X-Request-ID` and included in HTTP logs.
 
 ## Local non-Docker development

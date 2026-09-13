@@ -1,81 +1,8 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { useLoginMutation } from "../features/auth/auth.api"
+import { Link, useNavigate } from "react-router-dom"
+import { LockKeyhole, Mail, MessageCircle } from "lucide-react"
+import { useLoginMutation, authApi } from "../features/auth/auth.api"
 import { useAuth } from "../features/auth/useAuth"
 import { useDispatch } from "react-redux"
-import { authApi } from "../features/auth/auth.api"
 import type { AppDispatch } from "../app/store"
-const Login = () => {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-
-  const navigate = useNavigate()
-  const { setAuth } = useAuth()
-
-  // RTK Query hooks for login mutation and getCurrentUser query
-  const [login, { isLoading }] = useLoginMutation()
-  // const { refetch: refetchCurrentUser } = useGetCurrentUserQuery(undefined, {
-  //   skip: true, // we want to manually trigger refetch after login
-  // })
-  const dispatch = useDispatch<AppDispatch>()
-
-const submitHandler = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault()
-  try {
-    const loginRes = await login({ email, password }).unwrap()
-
-    // Manually fetch current user
-    const user = await dispatch(authApi.endpoints.getCurrentUser.initiate()).unwrap()
-
-    // Set auth state
-    setAuth(user, loginRes.data.accessToken)
-
-    navigate("/home", { replace: true })
-  } catch (err) {
-    console.error("Login failed", err)
-    alert("Invalid credentials")
-  }
-}
-
-
-  return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="flex flex-col justify-center items-center gap-6 h-[600px] w-[600px] border-4 rounded-xl bg-blue-300">
-        <h1 className="text-4xl font-serif">Login</h1>
-
-        <form
-          onSubmit={submitHandler}
-          className="flex flex-col gap-4 items-center"
-        >
-          <input
-            type="email"
-            value={email}
-            placeholder="Enter your email"
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="outline-none bg-transparent border-2 border-emerald-600 font-medium text-lg py-2 px-6 rounded-full"
-          />
-
-          <input
-            type="password"
-            value={password}
-            placeholder="Enter password"
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="outline-none bg-transparent border-2 border-emerald-600 font-medium text-lg py-2 px-6 rounded-full"
-          />
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="mt-7 text-white hover:bg-emerald-700 bg-emerald-600 text-lg py-2 px-8 w-full rounded-full"
-          >
-            {isLoading ? "Logging in..." : "Log in"}
-          </button>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-export default Login
+export default function Login() { const [email,setEmail]=useState("");const [password,setPassword]=useState("");const [error,setError]=useState("");const navigate=useNavigate();const {setAuth}=useAuth();const dispatch=useDispatch<AppDispatch>();const [login,{isLoading}]=useLoginMutation();const submit=async(e:React.FormEvent)=>{e.preventDefault();setError("");try{const result=await login({email,password}).unwrap();const user=await dispatch(authApi.endpoints.getCurrentUser.initiate()).unwrap();setAuth(user,result.data.accessToken);navigate("/home",{replace:true})}catch{setError("Check your email and password, then try again.")}};return <main className="app-shell flex min-h-screen items-center justify-center p-5"><section className="surface grid w-full max-w-5xl overflow-hidden rounded-2xl md:grid-cols-2"><aside className="relative hidden min-h-[590px] overflow-hidden border-r soft-border p-12 md:flex md:flex-col md:justify-between"><div className="absolute -bottom-28 -left-24 h-96 w-96 rounded-full border border-accent/25 bg-accent/5"/><div className="absolute -bottom-10 left-24 h-72 w-72 rounded-full border border-accent/20"/><div className="relative"><div className="mb-6 flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-ink"><MessageCircle/></div><h1 className="text-3xl font-semibold">TribeTalk</h1><p className="mt-3 max-w-xs text-lg leading-relaxed text-[#aeb9b8]">Communities feel better here.</p></div><p className="relative text-sm tracking-wide text-[#aeb9b8]">Chat&nbsp; · &nbsp;Share&nbsp; · &nbsp;Belong</p></aside><div className="flex min-h-[590px] items-center justify-center p-7 sm:p-12"><div className="w-full max-w-sm"><h2 className="text-2xl font-semibold">Welcome back</h2><p className="mt-1 text-sm text-[#aeb9b8]">Log in to continue to TribeTalk</p><form onSubmit={submit} className="mt-8 space-y-4"><label className="relative block"><Mail className="absolute left-3 top-3 text-[#899493]" size={18}/><input className="field pl-10" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Enter your email" type="email" required/></label><label className="relative block"><LockKeyhole className="absolute left-3 top-3 text-[#899493]" size={18}/><input className="field pl-10" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter password" type="password" required/></label>{error&&<p role="alert" className="text-sm text-red-300">{error}</p>}<button className="primary-button w-full" disabled={isLoading}>{isLoading?"Logging in…":"Log in"}</button></form><p className="mt-7 text-center text-sm text-[#aeb9b8]">New here? <Link className="text-accent hover:text-accent-soft" to="/register">Create an account</Link></p></div></div></section></main> }

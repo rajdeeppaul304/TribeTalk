@@ -29,4 +29,5 @@ export const env = {
   REDIS_URL: process.env.REDIS_URL || "",
   ELASTICSEARCH_URL: process.env.ELASTICSEARCH_URL || "",
   METRICS_TOKEN: process.env.METRICS_TOKEN || "",
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "",
 };

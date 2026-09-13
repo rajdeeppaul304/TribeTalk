@@ -1,24 +1,11 @@
-import { LeftSidebar } from '../components';
-import RightContent from '../components/RightContent';
-import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { setActiveChannel } from '../features/channels/channel.slice';
-const Home = () => {
-  const [searchParams] = useSearchParams()
-  const dispatch = useDispatch()
-  const channelId = searchParams.get("channelId")
-
-  useEffect(() => {
-    if (channelId) dispatch(setActiveChannel(channelId))
-  }, [channelId, dispatch])
-
-  return (
-    <div className='min-w-screen flex'>
-      <LeftSidebar/>
-      <RightContent/>
-    </div>
-  );
-};
-
-export default Home;
+import { Bell, Hash, Search, Users } from "lucide-react"
+import { LeftSidebar } from "../components"
+import RightContent from "../components/RightContent"
+import { useEffect } from "react"
+import { useSearchParams, Link } from "react-router-dom"
+import { useDispatch, useSelector } from "react-redux"
+import { setActiveChannel } from "../features/channels/channel.slice"
+import type { RootState } from "../app/store"
+import { useGetServerByIdQuery } from "../features/servers/server.api"
+const Home=()=>{const [params]=useSearchParams();const dispatch=useDispatch();const channelId=params.get("channelId");const activeServerId=useSelector((s:RootState)=>s.server.activeServerId);const activeChannel=useSelector((s:RootState)=>s.channel.activeChannelId);const {data:server}=useGetServerByIdQuery(activeServerId??"",{skip:!activeServerId});useEffect(()=>{if(channelId)dispatch(setActiveChannel(channelId))},[channelId,dispatch]);const channel=server?.channels.find(c=>c._id===activeChannel);const owner=server?.owner&&typeof server.owner!=="string"?[server.owner]:[];const members=[...owner,...(server?.moderators||[]),...(server?.members||[])];return <main className="app-shell flex h-screen overflow-hidden"><LeftSidebar/><section className="flex min-w-0 min-h-0 flex-1 flex-col"><header className="flex h-16 shrink-0 items-center gap-3 border-b soft-border bg-panel px-5"><Hash size={20} className="text-[#899493]"/><div className="min-w-0"><h1 className="truncate font-semibold">{channel?.name||"Select a channel"}</h1><p className="truncate text-xs text-[#899493]">{channel?.description||"Talk about anything here."}</p></div><div className="ml-auto flex items-center gap-2"><button className="icon-button"><Bell size={18}/></button><Link className="relative flex items-center gap-2 rounded-lg border soft-border bg-ink px-3 py-2 text-sm text-[#899493] hover:text-paper" to="/search"><Search size={16}/><span className="hidden sm:inline">Search messages</span></Link></div></header><div className="flex min-h-0 flex-1 overflow-hidden"><div className="min-w-0 min-h-0 flex-1"><RightContent/></div><aside className="hidden w-56 shrink-0 overflow-y-auto border-l soft-border bg-panel p-4 xl:block"><div className="mb-4 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[#899493]"><Users size={15}/>Members — {members.length}</div><div className="space-y-3">{members.map((member,index)=><Link className="flex items-center gap-2 text-sm text-[#c0c8c7] hover:text-paper" key={`${member._id}-${index}`} to={`/profile/${member._id}`}><span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-accent/15 text-accent">{member.username.slice(0,1).toUpperCase()}<span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-panel bg-emerald-400"/></span><span className="truncate">{member.username}</span></Link>)}</div></aside></div></section></main>}
+export default Home

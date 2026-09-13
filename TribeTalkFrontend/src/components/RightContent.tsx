@@ -11,6 +11,8 @@ import type { Message } from "../features/types"
 import { useNavigate } from "react-router-dom"
 import { useUploadImageMutation } from "../features/uploads/upload.api"
 import type { MessageAttachment } from "../features/types"
+import { ImagePlus, Pin, Send, X } from "lucide-react"
+import { useGetServerByIdQuery } from "../features/servers/server.api"
 
 const RightContent = () => {
   const [messageInput, setMessageInput] = useState("")
@@ -19,6 +21,7 @@ const RightContent = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [attachmentError, setAttachmentError] = useState("")
   const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const [showPinned, setShowPinned] = useState(false)
   const [uploadImage, { isLoading: isUploading }] = useUploadImageMutation()
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -28,6 +31,10 @@ const RightContent = () => {
   const activeChannelId = useSelector(
     (state: RootState) => state.channel.activeChannelId
   )
+  const activeServerId = useSelector((state: RootState) => state.server.activeServerId)
+  const { data: activeServer } = useGetServerByIdQuery(activeServerId ?? "", { skip: !activeServerId })
+  const mentionMatch = messageInput.match(/@([\w-]*)$/)
+  const mentionCandidates = mentionMatch && activeServer ? [activeServer.owner, ...activeServer.moderators, ...activeServer.members].filter((member): member is { _id: string; username: string } => typeof member !== "string" && member.username.toLowerCase().includes(mentionMatch[1].toLowerCase())).slice(0, 5) : []
 
   // Join/leave channel and fetch initial messages
   useChannelSync(activeChannelId)
@@ -161,12 +168,13 @@ const RightContent = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-900">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-ink">
+      {messages.some((message) => message.pinnedAt) && <div className="flex items-center gap-2 border-b soft-border bg-panel px-5 py-2 text-sm"><Pin size={15} className="text-accent"/><button onClick={() => setShowPinned(!showPinned)} className="text-[#c0c8c7]">{messages.filter((message) => message.pinnedAt).length} pinned message{messages.filter((message) => message.pinnedAt).length === 1 ? "" : "s"}</button>{showPinned && <span className="ml-2 truncate text-[#899493]">{messages.find((message) => message.pinnedAt)?.content}</span>}</div>}
       {/* Messages List */}
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-3"
+        className="scrollbar min-h-0 flex-1 space-y-1 overflow-y-auto px-5 py-4"
       >
         {/* Loading older messages indicator */}
         {isLoadingOlder && (
@@ -180,7 +188,7 @@ const RightContent = () => {
 
         {/* Messages */}
         {messages.length === 0 ? (
-          <p className="text-gray-500 text-center mt-10">
+          <p className="mt-10 text-center text-[#899493]">
             No messages yet. Be the first to send one!
           </p>
         ) : (
@@ -216,31 +224,32 @@ const RightContent = () => {
       </div>
 
       {/* Message Input */}
-      <form onSubmit={handleSendMessage} className="p-4 bg-gray-800 border-t border-gray-700">
-        {replyTo && <div className="mb-2 flex items-center justify-between rounded bg-gray-700 px-3 py-2 text-sm text-gray-200">Replying to {replyTo.senderUsername || "message"}<button type="button" onClick={() => setReplyTo(null)} className="text-red-300">Cancel</button></div>}
-        {selectedImage && <div className="mb-2 flex items-center gap-2 text-sm text-blue-200"><span>Attached: {selectedImage.name}</span><button type="button" onClick={() => setSelectedImage(null)} className="text-red-300 hover:text-red-200">Remove</button></div>}
+      <form onSubmit={handleSendMessage} className="shrink-0 border-t soft-border bg-panel p-4">
+        {replyTo && <div className="mb-2 flex items-center justify-between rounded-lg bg-ink px-3 py-2 text-sm text-[#c0c8c7]">Replying to {replyTo.senderUsername || "message"}<button type="button" onClick={() => setReplyTo(null)} className="icon-button"><X size={15}/></button></div>}
+        {selectedImage && <div className="mb-2 flex items-center gap-2 text-sm text-accent"><span>Attached: {selectedImage.name}</span><button type="button" onClick={() => setSelectedImage(null)} className="text-red-300 hover:text-red-200">Remove</button></div>}
         {attachmentError && <p className="mb-2 text-sm text-red-300">{attachmentError}</p>}
-        <div className="flex gap-2">
+        <div className="flex gap-2 rounded-xl border soft-border bg-ink p-1.5">
           <input
             type="text"
             value={messageInput}
             onChange={handleInputChange}
             placeholder="Type a message..."
-            className="flex-1 bg-gray-700 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="min-w-0 flex-1 bg-transparent px-3 py-2 text-paper outline-none"
             disabled={!!editingMessageId || isUploading}
           />
-          <label className="cursor-pointer rounded bg-gray-600 px-3 py-2 text-sm text-white hover:bg-gray-500">
-            Image
+          <label className="icon-button cursor-pointer" title="Attach image">
+            <ImagePlus size={18}/>
             <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={selectImage} disabled={!!editingMessageId || isUploading} className="hidden" />
           </label>
           <button
             type="submit"
             disabled={!!editingMessageId || isUploading}
-            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-ink disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isUploading ? "Uploading..." : "Send"}
+            {isUploading ? "…" : <Send size={17}/>}<span className="sr-only">Send</span>
           </button>
         </div>
+        {mentionCandidates.length > 0 && <div className="absolute bottom-20 left-5 z-20 w-64 overflow-hidden rounded-xl border soft-border bg-panel p-1 shadow-2xl">{mentionCandidates.map((member) => <button type="button" key={member._id} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-white/7" onClick={() => setMessageInput(messageInput.replace(/@[\w-]*$/, `@${member.username} `))}><span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/15 text-accent">{member.username.slice(0,1).toUpperCase()}</span>@{member.username}</button>)}</div>}
       </form>
     </div>
   )
@@ -349,18 +358,18 @@ const MessageItem = ({
 
   return (
     <div
-      className={`bg-gray-800 p-3 rounded relative ${
-        message.isFailed ? "border-2 border-red-500" : ""
+      className={`group relative rounded-lg px-3 py-2 ${
+        message.isFailed ? "border border-red-400/60 bg-red-400/5" : "hover:bg-white/[.035]"
       }`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       <div className="flex items-baseline gap-2">
-        <button onClick={() => navigate(`/profile/${message.senderId}`)} className={`font-semibold ${isOwn ? "text-green-400" : "text-blue-400"} hover:underline`}>
+        <button onClick={() => navigate(`/profile/${message.senderId}`)} className="font-semibold text-accent hover:text-accent-soft hover:underline">
           {message.senderUsername ||
             (isOwn ? currentUsername : `User ${message.senderId?.slice(-4)}`)}
         </button>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-[#899493]">
           {formatTime(message.timestamp || message.createdAt)}
         </span>
         {showSending && (
@@ -369,12 +378,10 @@ const MessageItem = ({
         {message.isFailed && <button onClick={onRetry} className="text-xs text-red-300 hover:text-red-200">Failed — retry</button>}
       </div>
 
-      {message.content && <p className={`text-gray-200 mt-1 ${message.deletedAt ? "italic text-gray-500" : ""}`}>{message.content}</p>}
-      {message.replyTo && <p className="mt-1 text-xs text-blue-300">↳ Reply in thread</p>}
-      {message.pinnedAt && <p className="mt-1 text-xs text-yellow-300">📌 Pinned</p>}
+      {message.content && <p className={`mt-1 text-sm leading-6 text-[#d9e1df] ${message.deletedAt ? "italic text-[#899493]" : ""}`}>{message.content}</p>}
+      {message.replyTo && <p className="mt-1 text-xs text-accent">↳ Reply in thread</p>}
       <div className="mt-2 flex flex-wrap gap-1">
-        {(message.reactions || []).map((reaction) => <button key={reaction.emoji} onClick={() => onReact(reaction.emoji)} className="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600">{reaction.emoji} {reaction.userIds.length}</button>)}
-        {!message.deletedAt && <><button onClick={() => onReact("👍")} className="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600">👍</button><button onClick={onReply} className="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600">Reply</button><button onClick={onPin} className="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600">{message.pinnedAt ? "Unpin" : "Pin"}</button></>}
+        {(message.reactions || []).map((reaction) => <button key={reaction.emoji} onClick={() => onReact(reaction.emoji)} className="rounded-md border soft-border bg-panel px-2 py-1 text-xs hover:border-accent/50">{reaction.emoji} {reaction.userIds.length}</button>)}
       </div>
       {message.attachments?.map((attachment) => (
         <a key={attachment.publicId} href={attachment.url} target="_blank" rel="noreferrer" className="mt-2 block w-fit">
@@ -382,8 +389,10 @@ const MessageItem = ({
         </a>
       ))}
 
-      {showActions && isOwn && !message.deletedAt && !message.isPending && (
-        <div className="absolute top-2 right-2 flex gap-1">
+      {showActions && !message.deletedAt && !message.isPending && (
+        <div className="absolute -top-4 right-3 flex gap-1 rounded-lg border soft-border bg-panel p-1 shadow-xl">
+          <button onClick={() => onReact("👍")} className="icon-button" title="React">👍</button><button onClick={() => onReact("❤️")} className="icon-button" title="React">❤️</button><button onClick={() => onReact("😂")} className="icon-button" title="React">😂</button><button onClick={onReply} className="icon-button" title="Reply">↩</button><button onClick={onPin} className="icon-button" title="Pin">⌖</button>
+          {isOwn && <>
           <button
             onClick={onStartEdit}
             className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-500"
@@ -396,6 +405,7 @@ const MessageItem = ({
           >
             Delete
           </button>
+          </>}
         </div>
       )}
     </div>
