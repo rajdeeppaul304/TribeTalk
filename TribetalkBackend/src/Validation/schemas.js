@@ -28,6 +28,22 @@ export const refreshTokenSchema = z.object({
   query: z.object({}),
 });
 
+export const updateProfileSchema = z.object({
+  body: z.object({
+    displayName: z.string().trim().min(1).max(50).optional(),
+    avatar: z.union([z.string().url().max(2048), z.literal("")]).optional(),
+    bio: z.string().trim().max(300).optional(),
+  }).refine((body) => Object.keys(body).length > 0, "Provide at least one field to update"),
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const publicProfileParamsSchema = z.object({
+  body: z.object({}),
+  params: z.object({ userId: objectId }),
+  query: z.object({}),
+});
+
 export const createServerSchema = z.object({
   body: z.object({ name: z.string().trim().min(3).max(50), description: optionalDescription }),
   params: z.object({}),
@@ -106,4 +122,13 @@ export const editMessageSchema = z.object({
   body: z.object({ content: z.string().trim().min(1).max(2000) }),
   params: z.object({ messageId: objectId }),
   query: z.object({}),
+});
+
+export const searchMessagesSchema = z.object({
+  body: z.object({}),
+  params: z.object({}),
+  query: z.object({
+    q: z.string().trim().min(2).max(200),
+    limit: z.coerce.number().int().min(1).max(50).optional().default(20),
+  }),
 });

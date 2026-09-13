@@ -12,9 +12,20 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 }
 
 const cookieSecure = process.env.COOKIE_SECURE === "true";
+const cloudinaryConfigured = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
 
 export const env = {
   PORT: port,
   CORS_ORIGIN: process.env.CORS_ORIGIN || "http://localhost:5173",
   COOKIE_SECURE: cookieSecure,
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || "",
+  CLOUDINARY_CONFIGURED: cloudinaryConfigured,
+  REDIS_URL: process.env.REDIS_URL || "",
+  ELASTICSEARCH_URL: process.env.ELASTICSEARCH_URL || "",
 };

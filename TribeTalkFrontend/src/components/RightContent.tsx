@@ -8,11 +8,17 @@ import { useReadState } from "../hooks/useReadState"
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver"
 import { useAuth } from "../features/auth/useAuth"
 import type { Message } from "../features/types"
+import { useNavigate } from "react-router-dom"
+import { useUploadImageMutation } from "../features/uploads/upload.api"
+import type { MessageAttachment } from "../features/types"
 
 const RightContent = () => {
   const [messageInput, setMessageInput] = useState("")
   const [editContent, setEditContent] = useState("")
   const [isLoadingOlder, setIsLoadingOlder] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [attachmentError, setAttachmentError] = useState("")
+  const [uploadImage, { isLoading: isUploading }] = useUploadImageMutation()
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -88,12 +94,24 @@ const RightContent = () => {
   }
 
   // Handle send message
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!messageInput.trim()) return
+    if (!messageInput.trim() && !selectedImage) return
 
-    sendMessage(messageInput.trim())
+    let attachments: MessageAttachment[] = []
+    if (selectedImage) {
+      try {
+        attachments = [await uploadImage(selectedImage).unwrap()]
+      } catch {
+        setAttachmentError("Image upload failed. Check Cloudinary configuration and try again.")
+        return
+      }
+    }
+
+    sendMessage(messageInput.trim(), attachments)
     setMessageInput("")
+    setSelectedImage(null)
+    setAttachmentError("")
 
     // Mark channel as read after sending (you've seen everything up to your message)
     markAsRead()
@@ -120,6 +138,12 @@ const RightContent = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessageInput(e.target.value)
     handleTyping()
+  }
+
+  const selectImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const image = event.target.files?.[0] || null
+    setSelectedImage(image)
+    setAttachmentError("")
   }
 
   // No channel selected
@@ -184,6 +208,8 @@ const RightContent = () => {
 
       {/* Message Input */}
       <form onSubmit={handleSendMessage} className="p-4 bg-gray-800 border-t border-gray-700">
+        {selectedImage && <div className="mb-2 flex items-center gap-2 text-sm text-blue-200"><span>Attached: {selectedImage.name}</span><button type="button" onClick={() => setSelectedImage(null)} className="text-red-300 hover:text-red-200">Remove</button></div>}
+        {attachmentError && <p className="mb-2 text-sm text-red-300">{attachmentError}</p>}
         <div className="flex gap-2">
           <input
             type="text"
@@ -191,14 +217,18 @@ const RightContent = () => {
             onChange={handleInputChange}
             placeholder="Type a message..."
             className="flex-1 bg-gray-700 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={!!editingMessageId}
+            disabled={!!editingMessageId || isUploading}
           />
+          <label className="cursor-pointer rounded bg-gray-600 px-3 py-2 text-sm text-white hover:bg-gray-500">
+            Image
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={selectImage} disabled={!!editingMessageId || isUploading} className="hidden" />
+          </label>
           <button
             type="submit"
-            disabled={!!editingMessageId}
+            disabled={!!editingMessageId || isUploading}
             className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send
+            {isUploading ? "Uploading..." : "Send"}
           </button>
         </div>
       </form>
@@ -235,6 +265,7 @@ const MessageItem = ({
   onCancelEdit,
   onDelete,
 }: MessageItemProps) => {
+  const navigate = useNavigate()
   const [showActions, setShowActions] = useState(false)
   const [hasWaitedToSend, setHasWaitedToSend] = useState(false)
 
@@ -307,10 +338,10 @@ const MessageItem = ({
       onMouseLeave={() => setShowActions(false)}
     >
       <div className="flex items-baseline gap-2">
-        <span className={`font-semibold ${isOwn ? "text-green-400" : "text-blue-400"}`}>
+        <button onClick={() => navigate(`/profile/${message.senderId}`)} className={`font-semibold ${isOwn ? "text-green-400" : "text-blue-400"} hover:underline`}>
           {message.senderUsername ||
             (isOwn ? currentUsername : `User ${message.senderId?.slice(-4)}`)}
-        </span>
+        </button>
         <span className="text-xs text-gray-500">
           {formatTime(message.timestamp || message.createdAt)}
         </span>
@@ -319,9 +350,12 @@ const MessageItem = ({
         )}
       </div>
 
-      <p className={`text-gray-200 mt-1 ${message.deletedAt ? "italic text-gray-500" : ""}`}>
-        {message.content}
-      </p>
+      {message.content && <p className={`text-gray-200 mt-1 ${message.deletedAt ? "italic text-gray-500" : ""}`}>{message.content}</p>}
+      {message.attachments?.map((attachment) => (
+        <a key={attachment.publicId} href={attachment.url} target="_blank" rel="noreferrer" className="mt-2 block w-fit">
+          <img src={attachment.url} alt="Message attachment" className="max-h-80 max-w-full rounded object-contain" loading="lazy" />
+        </a>
+      ))}
 
       {showActions && isOwn && !message.deletedAt && !message.isPending && (
         <div className="absolute top-2 right-2 flex gap-1">

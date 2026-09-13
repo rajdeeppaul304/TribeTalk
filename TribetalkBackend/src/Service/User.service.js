@@ -25,7 +25,8 @@ export const registerUser = async ({ email, username, password }) => {
     const createdUser = await userRepo.createUserDoc({
         email,
         password,
-        username: username.toLowerCase()
+        username: username.toLowerCase(),
+        displayName: username.trim()
     });
 
     const safeUser = await userRepo.findUserByIdWithoutSensitiveData(createdUser._id);
@@ -61,6 +62,25 @@ export const loginUser = async ({ email, password }) => {
 export const logoutUser = async (userId) => {
     await userRepo.unsetUserRefreshToken(userId);
     return true;
+};
+
+export const updateProfile = async (userId, profile) => {
+    const updatedUser = await userRepo.updateUserProfile(userId, profile);
+    if (!updatedUser) {
+        throw new ApiError(404, "User not found");
+    }
+    return updatedUser;
+};
+
+export const getPublicProfile = async (userId) => {
+    const user = await userRepo.findPublicUserProfileById(userId);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+    return {
+        ...user,
+        displayName: user.displayName || user.username,
+    };
 };
 
 export const refreshAccessToken = async (incomingRefreshToken) => {

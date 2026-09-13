@@ -5,9 +5,9 @@ const messageSchema = new Schema(
   {
     content: {
       type: String,
-      required: true,
       trim: true,
       maxlength: 2000,
+      default: "",
     },
 
     sender: {
@@ -57,6 +57,15 @@ const messageSchema = new Schema(
       type: String,
       default: null,
     },
+
+    attachments: [{
+      url: { type: String, required: true },
+      publicId: { type: String, required: true },
+      format: { type: String, required: true },
+      bytes: { type: Number, required: true },
+      width: { type: Number, required: true },
+      height: { type: Number, required: true },
+    }],
   },
   { timestamps: true }
 );

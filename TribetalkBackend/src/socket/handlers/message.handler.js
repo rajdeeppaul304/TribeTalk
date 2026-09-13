@@ -4,17 +4,47 @@ import * as messageService from "../../Service/Message.service.js";
 import * as channelService from "../../Service/Channel.service.js";
 
 import { formatMessageDTO } from "../socket.utils.js";
+import { z } from "zod";
+import { isTrustedCloudinaryAttachment } from "../../config/cloudinary.js";
+
+const attachmentSchema = z.object({
+    url: z.string().url(),
+    publicId: z.string().min(1).max(255),
+    format: z.string().min(1).max(20),
+    bytes: z.number().int().positive().max(5 * 1024 * 1024),
+    width: z.number().int().positive().max(2400),
+    height: z.number().int().positive().max(2400),
+});
+
+const sendMessageSchema = z.object({
+    channelId: z.string().regex(/^[a-f\d]{24}$/i),
+    content: z.string().trim().max(2000).optional().default(""),
+    clientId: z.string().max(100).nullable().optional(),
+    attachments: z.array(attachmentSchema).max(4).optional().default([]),
+}).refine((payload) => payload.content.length > 0 || payload.attachments.length > 0, {
+    message: "Message content or an attachment is required",
+});
 
 export default function registerMessageHandlers(io, socket) {
-    socket.on("send_message", async ({ channelId, content, clientId = null }) => {
+    socket.on("send_message", async (payload) => {
+        const parsedPayload = sendMessageSchema.safeParse(payload);
+        const clientId = parsedPayload.success ? parsedPayload.data.clientId : payload?.clientId;
         try {
+            if (!parsedPayload.success) {
+                throw new Error("Invalid message payload");
+            }
+            const { channelId, content, attachments } = parsedPayload.data;
+            if (attachments.some((attachment) => !isTrustedCloudinaryAttachment(attachment))) {
+                throw new Error("Invalid image attachment");
+            }
             const user = socket.user;
 
             const savedMessage = await messageService.addMessage({
                 content,
                 channelId,
                 UserId: user._id,
-                clientId
+                clientId,
+                attachments,
             });
 
             const messageWithUser = {

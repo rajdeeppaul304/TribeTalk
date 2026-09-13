@@ -32,6 +32,7 @@ export function formatMessageDTO(message) {
         isEdited: Boolean(message.isEdited),
         editedAt: message.editedAt ? new Date(message.editedAt).toISOString() : null,
         isSystemMessage: Boolean(message.isSystemMessage),
-        clientId: message.clientId || null
+        clientId: message.clientId || null,
+        attachments: message.attachments || []
     };
 }

@@ -4,8 +4,19 @@ export interface User {
   username: string
   email: string
   avatar?: string
+  displayName?: string
+  bio?: string
   createdAt?: string
   updatedAt?: string
+}
+
+export interface PublicProfile {
+  _id: string
+  username: string
+  displayName: string
+  avatar?: string
+  bio?: string
+  createdAt?: string
 }
 
 

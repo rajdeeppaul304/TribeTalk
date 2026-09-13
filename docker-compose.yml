@@ -10,6 +10,33 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.5
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health >/dev/null"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
   backend:
     build:
       context: ./TribetalkBackend
@@ -21,9 +48,15 @@ services:
       PORT: 3000
       CORS_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       NODE_ENV: production
     depends_on:
       mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
@@ -46,3 +79,5 @@ services:
 
 volumes:
   mongo-data:
+  redis-data:
+  elasticsearch-data:

@@ -3,6 +3,7 @@ import * as messageRepo from "../Repository/Message.repository.js";
 import { checkChannelAccess } from "./Permission.service.js";
 import { ApiError } from "../Utils/ApiError.js";
 import { findUserAccessibleChannelIds } from "../Repository/Server.repository.js";
+import { indexMessage, removeMessageFromIndex } from "./Search.service.js";
 
 /**
  * Internal guard for domain-level authorization
@@ -17,9 +18,9 @@ const assertChannelAccess = async (userId, channelId) => {
 /**
  * Add a new message (Guarded)
  */
-export const addMessage = async ({ content, channelId, UserId, clientId = null, isSystemMessage = false }) => {
-  if (!content?.trim() && !isSystemMessage) {
-    throw new ApiError(400, "Message content cannot be empty");
+export const addMessage = async ({ content, channelId, UserId, clientId = null, isSystemMessage = false, attachments = [] }) => {
+  if (!content?.trim() && attachments.length === 0 && !isSystemMessage) {
+    throw new ApiError(400, "Message content or an attachment is required");
   }
 
   if (!UserId || !channelId) {
@@ -34,12 +35,16 @@ export const addMessage = async ({ content, channelId, UserId, clientId = null, 
     sender: UserId,
     channel: channelId,
     clientId,
-    isSystemMessage
+    isSystemMessage,
+    attachments,
   });
 
   if (!savedMessage) {
     throw new ApiError(404, "Channel not found");
   }
+
+  await savedMessage.populate("sender", "username displayName avatar");
+  void indexMessage(savedMessage);
 
   return savedMessage;
 };
@@ -84,6 +89,8 @@ export const editMessage = async (messageId, content, userId) => {
     throw new ApiError(404, "Message not found or you do not have permission to edit it");
   }
 
+  void indexMessage(updatedMessage);
+
   return updatedMessage;
 };
 
@@ -102,6 +109,8 @@ export const deleteMessage = async (messageId, userId) => {
   if (!deletedMessage) {
     throw new ApiError(404, "Message not found or you do not have permission to delete it");
   }
+
+  void removeMessageFromIndex(deletedMessage._id);
 
   return deletedMessage;
 };

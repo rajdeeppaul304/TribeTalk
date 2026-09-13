@@ -10,7 +10,7 @@ import {
   setEditingMessage 
 } from "../features/messages/message.slice"
 import { useAuth } from "../features/auth/useAuth"
-import type { Message } from "../features/types"
+import type { Message, MessageAttachment } from "../features/types"
 
 const EMPTY_MESSAGES: Message[] = []
 
@@ -44,7 +44,7 @@ export function useMessages(channelId: string | null) {
   // SEND MESSAGE
   // ============================================
 
-  const sendMessage = useCallback((content: string) => {
+  const sendMessage = useCallback((content: string, attachments: MessageAttachment[] = []) => {
     console.log("user object:", user)
   const senderId = user?._id
   if (!channelId || !senderId) return
@@ -67,11 +67,12 @@ export function useMessages(channelId: string | null) {
   isEdited: false,
   isPending: true,
   clientId,
+  attachments,
 }
 
   dispatch(addMessage({ channelId, message: optimisticMessage }))
 
-  socketGateway.sendMessage({ channelId, content, clientId })
+  socketGateway.sendMessage({ channelId, content, clientId, attachments })
 
   if (isTypingRef.current) {
     socketGateway.stopTyping(channelId)

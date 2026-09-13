@@ -1,6 +1,6 @@
 // features/auth/auth.api.ts
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
-import type { ApiResponse, AuthResponse, User } from "./auth.types"
+import type { ApiResponse, AuthResponse, PublicProfile, User } from "./auth.types"
 import { env } from "../../config/env"
 
 export const authApi = createApi({
@@ -40,6 +40,14 @@ export const authApi = createApi({
   query: () => "/users/current-user",
   transformResponse: (response: ApiResponse<User>) => response.data,
 }),
+    updateProfile: builder.mutation<User, { displayName?: string; avatar?: string; bio?: string }>({
+      query: (body) => ({ url: "/users/profile", method: "PATCH", body }),
+      transformResponse: (response: ApiResponse<User>) => response.data,
+    }),
+    getPublicUserProfile: builder.query<PublicProfile, string>({
+      query: (userId) => `/users/${userId}/profile`,
+      transformResponse: (response: ApiResponse<PublicProfile>) => response.data,
+    }),
   }),
 })
 
@@ -49,4 +57,6 @@ export const {
   useLogoutMutation,
   useRefreshTokenMutation,
   useGetCurrentUserQuery,
+  useUpdateProfileMutation,
+  useGetPublicUserProfileQuery,
 } = authApi

@@ -1,6 +1,6 @@
 // features/messages/message.api.ts
 import { baseApi } from "../api/baseApi"
-import type { Message } from "../types"
+import type { Message, MessageAttachment } from "../types"
 
 type ApiResponse<T> = {
   statusCode: number
@@ -26,6 +26,7 @@ type BackendMessage = {
   editedAt?: string | null
   isSystemMessage?: boolean
   clientId?: string | null
+  attachments?: MessageAttachment[]
 }
 
 export const messageApi = baseApi.injectEndpoints({
@@ -62,6 +63,7 @@ export const messageApi = baseApi.injectEndpoints({
           editedAt: msg.editedAt || undefined,
           isSystemMessage: msg.isSystemMessage || false,
           clientId: msg.clientId || undefined,
+          attachments: msg.attachments || [],
           }
         })
         return {

@@ -12,6 +12,8 @@ import JoinServerRedirect from "./components/JoinServerRedirect"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
 import Home from "./pages/Home"
+import Profile from "./pages/Profile"
+import Search from "./pages/Search"
 
 function App() {
   // const { isAuthenticated, token } = useAuth()
@@ -69,6 +71,11 @@ function App() {
           isLoggedIn ? <Home /> : <Navigate to="/login" replace />
         }
       />
+      <Route
+        path="/profile/:userId"
+        element={isLoggedIn ? <Profile /> : <Navigate to="/login" replace />}
+      />
+      <Route path="/search" element={isLoggedIn ? <Search /> : <Navigate to="/login" replace />} />
 
       {/* Fallback */}
       <Route

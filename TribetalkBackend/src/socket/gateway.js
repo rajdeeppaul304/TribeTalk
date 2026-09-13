@@ -1,5 +1,4 @@
 //gateway.js
-import SessionManager from "./SessionManager.js";
 import { socketAuthMiddleware, channelGuardMiddleware } from "./socket.middleware.js";
 import { initChannelBroadcaster } from "./broadcasters/channel.broadcaster.js";
 import { initServerBroadcaster } from "./broadcasters/server.broadcaster.js";
@@ -7,21 +6,31 @@ import registerChannelHandlers from "./handlers/channel.handler.js";
 import registerMessageHandlers from "./handlers/message.handler.js";
 import registerSyncHandlers from "./handlers/sync.handler.js";
 import * as serverService from "../Service/Server.service.js";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { markSocketOffline, markSocketOnline, refreshSocketPresence } from "../config/redis.js";
 
 const typingUsers = new Map(); // channelId -> Set of userIds
 
-export default function setupGateway(io) {
-    const sessionManager = new SessionManager();
-
+export default function setupGateway(io, redisClients = null) {
+    if (redisClients) {
+        io.adapter(createAdapter(redisClients.pubClient, redisClients.subClient));
+        console.log("✅ Socket.IO Redis adapter enabled");
+    }
     // 📡 Initialize outbound only broadcasters
     initChannelBroadcaster(io);
-    initServerBroadcaster(io, sessionManager);
+    initServerBroadcaster(io);
 
     io.use(socketAuthMiddleware);
 
     io.on("connection", async (socket) => {
         console.log(`✅ Socket connected: ${socket.id} | User: ${socket.user._id}`);
-        sessionManager.addUser(socket.user._id.toString(), socket.id);
+        const userId = socket.user._id.toString();
+        socket.join(`user:${userId}`);
+        void markSocketOnline(userId, socket.id);
+
+        socket.on("presence_heartbeat", () => {
+            void refreshSocketPresence(userId, socket.id);
+        });
 
         // Join every server room this user belongs to
         try {
@@ -51,7 +60,7 @@ export default function setupGateway(io) {
                     });
                 }
             }
-            sessionManager.removeSocket(socket.id);
+            void markSocketOffline(userId, socket.id);
         });
     });
 }

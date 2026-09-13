@@ -8,6 +8,8 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../app/store"; // adjust path to your store
 import { socketGateway } from "../gateway/socket"
 import {copyToClipboard} from "../utils/commonTools"
+import { Link } from "react-router-dom"
+import { useAuth } from "../features/auth/useAuth"
 
 
 
@@ -17,6 +19,7 @@ const LeftSidebar = () => {
   const [isServerModalOpen, setIsServerModalOpen] = useState(false)
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false)
   const unreadCounts = useSelector((state: RootState) => state.channel.unreadCounts)
+  const { user } = useAuth()
   const baseUrl=`${window.location.origin}/server/join-server/`
   const activeServer = servers.find((server) => server._id === activeServerId)
   const inviteUrl = activeServer?.inviteCode
@@ -39,7 +42,7 @@ const LeftSidebar = () => {
   return (
     <div className="w-64 h-screen bg-gray-800 text-white p-4">
       <div className="flex gap-2 justify-evenly">
-        <h1 className="text-xl font-bold mb-6">My App</h1>
+        <div className="flex flex-col gap-1"><Link to={user ? `/profile/${user._id}` : "/home"} className="text-xl font-bold hover:text-blue-300">My Profile</Link><Link to="/search" className="text-sm text-blue-300 hover:text-blue-200">Search messages</Link></div>
       <button onClick={() => inviteUrl && copyToClipboard(inviteUrl)}
       disabled={!inviteUrl}
       className="

@@ -97,3 +97,19 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, req.user, "User profile fetched successfully"));
 });
+
+export const updateCurrentUserProfile = asyncHandler(async (req, res) => {
+    const updatedUser = await userService.updateProfile(req.user._id, req.body);
+
+    return res.status(200).json(
+        new ApiResponse(200, updatedUser, "Profile updated successfully")
+    );
+});
+
+export const getPublicUserProfile = asyncHandler(async (req, res) => {
+    const profile = await userService.getPublicProfile(req.params.userId);
+
+    return res.status(200).json(
+        new ApiResponse(200, profile, "Public profile fetched successfully")
+    );
+});

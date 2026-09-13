@@ -7,7 +7,7 @@ describe("application baseline", () => {
     const response = await request(app).get("/api/health");
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ status: "ok" });
+    expect(response.body).toMatchObject({ status: "ok" });
   });
 
   it("returns the standard JSON shape for unknown routes", async () => {

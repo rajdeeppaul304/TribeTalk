@@ -7,6 +7,8 @@ import { errorHandler } from "./Middlewares/Error.middleware.js"
 import { env } from "./config/env.js"
 import { apiLimiter } from "./Middlewares/RateLimit.middleware.js"
 import { openapiSpecification } from "./config/openapi.js"
+import { isRedisReady } from "./config/redis.js"
+import { isElasticsearchReady } from "./config/elasticsearch.js"
 
 const app = express()
 
@@ -37,7 +39,11 @@ app.get("/", (_req, res) => {
 })
 
 app.get("/api/health", (_req, res) => {
-    res.status(200).json({ status: "ok" })
+    res.status(200).json({
+        status: "ok",
+        redis: isRedisReady() ? "connected" : "unavailable",
+        elasticsearch: isElasticsearchReady() ? "connected" : "unavailable",
+    })
 })
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapiSpecification, { explorer: true }))
@@ -47,6 +53,8 @@ import userRouter from './Routes/User.route.js'
 import serverRouter from './Routes/Server.route.js'
 import channelRouter from './Routes/Channel.route.js'
 import messageRouter from './Routes/Message.route.js'
+import uploadRouter from './Routes/Upload.route.js'
+import searchRouter from './Routes/Search.route.js'
 
 //routes usage
 app.use("/api/v1", apiLimiter)
@@ -54,6 +62,8 @@ app.use("/api/v1/users", userRouter)
 app.use("/api/v1/server", serverRouter)
 app.use("/api/v1/channels", channelRouter)
 app.use("/api/v1/messages", messageRouter)
+app.use("/api/v1/uploads", uploadRouter)
+app.use("/api/v1/search", searchRouter)
 
 app.use((req, res) => {
     res.status(404).json({

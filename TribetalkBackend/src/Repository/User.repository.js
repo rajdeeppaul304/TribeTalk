@@ -41,3 +41,17 @@ export const unsetUserRefreshToken = async (userId) => {
         { new: true }
     );
 };
+
+export const updateUserProfile = async (userId, profile) => {
+    return await User.findByIdAndUpdate(
+        userId,
+        { $set: profile },
+        { new: true, runValidators: true }
+    ).select("-password -refreshToken").lean();
+};
+
+export const findPublicUserProfileById = async (userId) => {
+    return await User.findById(userId)
+        .select("_id username displayName avatar bio createdAt")
+        .lean();
+};

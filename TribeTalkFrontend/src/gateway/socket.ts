@@ -1,16 +1,24 @@
 // gateway/socket.ts (UPDATED)
 import { io, Socket } from "socket.io-client"
-import type { Channel, Message, SyncState, TypingIndicator } from "../features/types"
+import type { Channel, Message, MessageAttachment, SyncState, TypingIndicator } from "../features/types"
 import { env } from "../config/env"
 
 class SocketGateway {
   private socket: Socket | null = null
+  private presenceHeartbeat: number | null = null
 
   connect(token: string) {
     this.socket?.disconnect()
     this.socket = io(env.socketUrl, {
       auth: { token }
     })
+    this.socket.on("connect", () => {
+      this.socket?.emit("presence_heartbeat")
+      this.presenceHeartbeat = window.setInterval(() => {
+        this.socket?.emit("presence_heartbeat")
+      }, 25_000)
+    })
+    this.socket.on("disconnect", () => this.clearPresenceHeartbeat())
   }
 
   private getSocket(): Socket {
@@ -38,7 +46,7 @@ class SocketGateway {
   // Message Events
   // ======================
 
-  sendMessage(payload: { channelId: string; content: string; clientId?: string }) {
+  sendMessage(payload: { channelId: string; content: string; clientId?: string; attachments?: MessageAttachment[] }) {
     const socket = this.getSocket()
     socket.emit("send_message", payload)
   }
@@ -192,7 +200,15 @@ class SocketGateway {
 
 
   disconnect() {
+    this.clearPresenceHeartbeat()
     this.socket?.disconnect()
+  }
+
+  private clearPresenceHeartbeat() {
+    if (this.presenceHeartbeat !== null) {
+      window.clearInterval(this.presenceHeartbeat)
+      this.presenceHeartbeat = null
+    }
   }
 }
 

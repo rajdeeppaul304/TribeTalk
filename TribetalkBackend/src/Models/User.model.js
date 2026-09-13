@@ -29,6 +29,26 @@ const userSchema = new Schema(
             trim: true, 
             index: true
         },
+        displayName: {
+            type: String,
+            trim: true,
+            maxlength: 50,
+            default: function () {
+                return this.username;
+            }
+        },
+        avatar: {
+            type: String,
+            trim: true,
+            maxlength: 2048,
+            default: ""
+        },
+        bio: {
+            type: String,
+            trim: true,
+            maxlength: 300,
+            default: ""
+        },
          refreshToken: {
             type: String
         }

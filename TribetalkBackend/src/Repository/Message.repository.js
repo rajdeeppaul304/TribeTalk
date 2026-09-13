@@ -5,7 +5,7 @@ import { ReadState } from "../Models/ReadState.model.js";
 /**
  * Create message and auto-increment channel sequence
  */
-export const createMessage = async ({ content, sender, channel, clientId = null, isSystemMessage = false }) => {
+export const createMessage = async ({ content, sender, channel, clientId = null, isSystemMessage = false, attachments = [] }) => {
   const updatedChannel = await Channel.findByIdAndUpdate(
     channel,
     { 
@@ -25,7 +25,8 @@ export const createMessage = async ({ content, sender, channel, clientId = null,
     channel,
     sequence: updatedChannel.messageSequence,
     clientId,
-    isSystemMessage
+    isSystemMessage,
+    attachments,
   });
 
   await Channel.findOneAndUpdate(

@@ -52,6 +52,26 @@ export interface Message {
   deletedAt?: string            // For soft deletes
   isPending?: boolean           // Local-only flag for optimistic updates
   isFailed?: boolean            // Local-only flag for failed sends
+  attachments?: MessageAttachment[]
+}
+
+export interface MessageAttachment {
+  url: string
+  publicId: string
+  format: string
+  bytes: number
+  width: number
+  height: number
+}
+
+export interface MessageSearchResult {
+  messageId: string
+  channelId: string
+  senderId: string
+  senderUsername: string
+  content: string
+  highlight: string
+  createdAt: string
 }
 export interface MessageState {
   messagesByChannel: Record<string, Message[]>
