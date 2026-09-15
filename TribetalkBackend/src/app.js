@@ -17,7 +17,7 @@ import { clearAdminSession, createAdminSession, requireAdminSession } from "./Mi
 
 const app = express()
 
-app.set("trust proxy", 1)
+app.set("trust proxy", 2)
 app.use(pinoHttp({ logger, genReqId: (req, res) => req.headers["x-request-id"] || randomUUID(), customLogLevel: (_req, res, error) => error || res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info" }))
 app.use((req, res, next) => {
     metrics.increment("httpRequests")
