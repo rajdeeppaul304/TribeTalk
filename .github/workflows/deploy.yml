@@ -1,0 +1,39 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd /opt/tribetalk
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            docker compose -f docker-compose.yml -f docker-compose.production.yml up --build -d
+            docker compose -f docker-compose.yml -f docker-compose.production.yml ps
+
+      - name: Verify production health
+        run: |
+          curl --fail --silent --show-error \
+            https://tribetalk.rajdeep.app/api/health
