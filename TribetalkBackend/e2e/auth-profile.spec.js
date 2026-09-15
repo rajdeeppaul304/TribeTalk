@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("an unauthenticated visitor is sent to login", async ({ page }) => {
   await page.goto("/home");
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole("heading", { name: "Login" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
 });
 
 test("a user can register, log in, and update their profile", async ({ page }) => {
@@ -17,7 +17,7 @@ test("a user can register, log in, and update their profile", async ({ page }) =
   await page.getByPlaceholder("Enter your email").fill(email);
   await page.getByPlaceholder("Enter your password").fill("password123");
   await page.getByPlaceholder("Confirm your password").fill("password123");
-  await page.getByRole("button", { name: "Sign Up" }).click();
+  await page.getByRole("button", { name: "Create account" }).click();
 
   await expect(page).toHaveURL(/\/login$/);
   await page.getByPlaceholder("Enter your email").fill(email);
@@ -25,7 +25,7 @@ test("a user can register, log in, and update their profile", async ({ page }) =
   await page.getByRole("button", { name: "Log in" }).click();
 
   await expect(page).toHaveURL(/\/home$/);
-  await page.getByRole("link", { name: "My Profile" }).click();
+  await page.locator('a[href^="/profile/"]').first().click();
   await expect(page.getByRole("heading", { name: username })).toBeVisible();
 
   await page.getByLabel("Display name").fill(displayName);
