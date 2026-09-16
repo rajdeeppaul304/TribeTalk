@@ -64,7 +64,7 @@ Useful local routes:
 
 - `http://localhost:8080/api/docs` — Swagger UI
 - `http://localhost:8080/api/health` — dependency health
-- `http://localhost:8080/admin` — interview/demo metrics dashboard; sign in using `ADMIN_PASSWORD`
+- `http://localhost:8080/admin` — demo metrics dashboard; sign in using `ADMIN_PASSWORD`
 
 Stop the stack with `docker compose down`. MongoDB, Redis, and Elasticsearch volumes persist unless you explicitly use `docker compose down -v`.
 
@@ -78,7 +78,7 @@ Stop the stack with `docker compose down`. MongoDB, Redis, and Elasticsearch vol
 | `REDIS_URL` | Shared Socket.IO, rate-limit, presence, and typing state |
 | `ELASTICSEARCH_URL` | Search index connection |
 | `CLOUDINARY_*` | Image upload configuration |
-| `ADMIN_PASSWORD` | Temporary interview-dashboard sign-in password |
+| `ADMIN_PASSWORD` | Temporary-dashboard sign-in password |
 | `LOG_LEVEL` | Pino log level |
 
 Never commit `.env` files or demo/admin passwords.
@@ -104,9 +104,3 @@ docker compose -f docker-compose.yml -f docker-compose.production.yml up --build
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for details.
 
-## Current limitations and next steps
-
-- The Compose deployment is single-host, not highly available.
-- Search indexing and notification generation are best-effort asynchronous work; production should use an outbox/queue with retries.
-- The live admin dashboard is an interview-only observability view; a real implementation needs role-based administrator authorization and durable log aggregation.
-- Planned improvements: responsive/accessibility polish, richer Swagger docs, larger integration/socket test coverage, durable observability, managed infrastructure, and background queues.
