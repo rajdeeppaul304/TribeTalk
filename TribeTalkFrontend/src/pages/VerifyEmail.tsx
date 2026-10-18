@@ -1,0 +1,11 @@
+import { useState } from "react"
+import { Link, useSearchParams } from "react-router-dom"
+import { useRequestEmailVerificationMutation, useVerifyEmailMutation } from "../features/auth/auth.api"
+
+export default function VerifyEmail() {
+  const [params] = useSearchParams(); const [email, setEmail] = useState(params.get("email") || ""); const [otp, setOtp] = useState(""); const [message, setMessage] = useState("")
+  const [requestCode, { isLoading: requesting }] = useRequestEmailVerificationMutation(); const [verify, { isLoading: verifying }] = useVerifyEmailMutation()
+  const request = async () => { setMessage(""); try { await requestCode({ email }).unwrap(); setMessage("If the account exists, a verification code has been sent.") } catch { setMessage("We could not send a verification code.") } }
+  const submit = async (event: React.FormEvent) => { event.preventDefault(); setMessage(""); try { await verify({ email, otp }).unwrap(); setMessage("Email verified. You can now sign in.") } catch { setMessage("That code is invalid or expired.") } }
+  return <main className="app-shell flex min-h-screen items-center justify-center p-5"><section className="surface w-full max-w-md rounded-2xl p-8 sm:p-10"><h1 className="text-2xl font-semibold">Verify your email</h1><p className="mt-2 text-sm text-[#aeb9b8]">Verification protects your account and enables password recovery.</p><div className="mt-7 space-y-3"><input className="field" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email"/><button type="button" className="secondary-button w-full" disabled={requesting || !email} onClick={() => void request()}>{requesting ? "Sending…" : "Send verification code"}</button></div><form onSubmit={submit} className="mt-4 space-y-4"><input className="field" inputMode="numeric" pattern="[0-9]{6}" required value={otp} onChange={e => setOtp(e.target.value)} placeholder="Six-digit verification code"/><button className="primary-button w-full" disabled={verifying}>{verifying ? "Verifying…" : "Verify email"}</button></form>{message && <p role="status" className="mt-4 text-sm text-accent">{message}</p>}<p className="mt-7 text-center text-sm text-[#aeb9b8]"><Link className="text-accent" to="/login">Back to login</Link></p></section></main>
+}

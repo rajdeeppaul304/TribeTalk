@@ -42,6 +42,16 @@ export const unsetUserRefreshToken = async (userId) => {
     );
 };
 
+export const markEmailVerified = (userId) => User.findByIdAndUpdate(userId, { $set: { emailVerifiedAt: new Date() } }, { new: true }).select("-password -refreshToken").lean();
+
+export const updateLoginSecurity = (userId, update) => User.findByIdAndUpdate(userId, { $set: update }, { new: true }).select("-password -refreshToken").lean();
+
+export const updateLoginFailure = (userId, failedLoginAttempts, loginLockedUntil) => User.findByIdAndUpdate(
+    userId,
+    { $set: { failedLoginAttempts, loginLockedUntil } },
+    { new: true }
+);
+
 export const updateUserProfile = async (userId, profile) => {
     return await User.findByIdAndUpdate(
         userId,

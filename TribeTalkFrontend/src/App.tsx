@@ -16,6 +16,9 @@ import Profile from "./pages/Profile"
 import Search from "./pages/Search"
 import Settings from "./pages/Settings"
 import Admin from "./pages/Admin"
+import ForgotPassword from "./pages/ForgotPassword"
+import ResetPassword from "./pages/ResetPassword"
+import VerifyEmail from "./pages/VerifyEmail"
 
 function App() {
   // const { isAuthenticated, token } = useAuth()
@@ -65,6 +68,9 @@ function App() {
           isLoggedIn ? <Navigate to="/home" replace /> : <Register />
         }
       />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
       {/* Protected route */}
       <Route

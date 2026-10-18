@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux"
 import { useCallback, useRef, useEffect } from "react"
 import type { RootState, AppDispatch } from "../app/store"
 import { socketGateway } from "../gateway/socket"
-import { useLazyGetMessageHistoryQuery } from "../features/messages/message.api"
+import { useLazyGetMessageHistoryQuery, useLazyGetMessageByIdQuery } from "../features/messages/message.api"
 import { 
   addMessage, 
   prependMessages, 
@@ -22,6 +22,7 @@ export function useMessages(channelId: string | null) {
   const dispatch = useDispatch<AppDispatch>()
   const { user } = useAuth()
   const [fetchHistory] = useLazyGetMessageHistoryQuery()
+  const [fetchMessageById] = useLazyGetMessageByIdQuery()
   
   // Typing timeout ref
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -189,6 +190,15 @@ export function useMessages(channelId: string | null) {
     }
   }, [channelId, messages, fetchHistory, dispatch])
 
+  const loadMessageById = useCallback(async (messageId: string) => {
+    if (!channelId) return null
+    try {
+      const message = await fetchMessageById({ channelId, messageId }).unwrap()
+      dispatch(addMessage({ channelId, message }))
+      return message
+    } catch { return null }
+  }, [channelId, fetchMessageById, dispatch])
+
   // ============================================
   // RETURN
   // ============================================
@@ -215,5 +225,6 @@ export function useMessages(channelId: string | null) {
     
     // Pagination
     loadOlderMessages,
+    loadMessageById,
   }
 }

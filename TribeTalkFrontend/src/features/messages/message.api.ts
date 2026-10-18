@@ -81,6 +81,13 @@ export const messageApi = baseApi.injectEndpoints({
         }
       },
     }),
+    getMessageById: builder.query<Message, { channelId: string; messageId: string }>({
+      query: ({ channelId, messageId }) => `/messages/${channelId}/messages/by-id/${messageId}`,
+      transformResponse: (response: ApiResponse<BackendMessage>) => {
+        const sender = typeof response.data.sender === "string" ? { _id: response.data.sender } : response.data.sender
+        return { id: response.data._id, content: response.data.content, senderId: sender._id, senderUsername: sender.username, senderAvatar: sender.avatar, channelId: response.data.channel, sequence: response.data.sequence, timestamp: response.data.createdAt, createdAt: response.data.createdAt, isEdited: response.data.isEdited, editedAt: response.data.editedAt || undefined, attachments: response.data.attachments || [], replyTo: response.data.replyTo || null, threadRoot: response.data.threadRoot || null, reactions: (response.data.reactions || []).map((reaction) => ({ emoji: reaction.emoji, userIds: reaction.users || [] })), pinnedAt: response.data.pinnedAt || null }
+      },
+    }),
 
     // Get sync data for a channel
     getChannelSyncData: builder.query<
@@ -112,6 +119,7 @@ export const messageApi = baseApi.injectEndpoints({
 export const {
   useGetMessageHistoryQuery,
   useLazyGetMessageHistoryQuery,
+  useLazyGetMessageByIdQuery,
   useGetChannelSyncDataQuery,
   useMarkChannelAsReadMutation,
 } = messageApi

@@ -49,12 +49,36 @@ MongoDB and Redis data persist in the `mongo-data` and `redis-data` Docker volum
    The production Nginx layer terminates TLS, redirects HTTP to HTTPS, enables compression/static caching, and preserves Socket.IO WebSocket upgrades. Certificates are intentionally not stored in this repository.
 5. Use a managed MongoDB service or add backups before treating the deployment as production.
 
+## MongoDB backups
+
+The repository includes repeatable backup scripts. They create compressed archives and remove backups older than the retention window:
+
+```powershell
+./deploy/backup/mongodb-backup.ps1 -OutputDirectory ./backups/mongo -RetentionDays 14
+```
+
+On Linux:
+
+```bash
+chmod +x deploy/backup/mongodb-backup.sh
+./deploy/backup/mongodb-backup.sh ./backups/mongo 14
+```
+
+Copy the resulting archive directory to durable storage such as S3, Backblaze B2, or another host. To restore a selected archive into the running Mongo container:
+
+```bash
+docker compose exec -T mongo mongorestore --drop --archive --gzip < backups/mongo/tribetalk-YYYYMMDD-HHMMSS/mongo.archive.gz
+```
+
+Schedule the backup command with cron or Task Scheduler and periodically perform a restore drill. Backups are not useful until restoration has been verified.
+
 ## Resume-ready demo checklist
 
 - Deploy using a domain you control and HTTPS; then add its URL to your README.
 - Create a separate low-privilege demo account manually after deployment. Do not commit its password or API tokens—list credentials only where you deliberately share the demo.
 - Add a strong `ADMIN_PASSWORD` to the backend environment. The `/admin` page sends it once to the backend and receives a two-hour, HTTP-only admin session cookie; the password is never included in frontend code. The dashboard reports request/error totals, active socket users, socket connections, message throughput, service health, and process uptime.
 - Keep production logs as JSON (`LOG_LEVEL=info`); request IDs are returned in `X-Request-ID` and included in HTTP logs.
+- Run the optional observability profile for Prometheus/Grafana/Loki, and keep `METRICS_TOKEN` private.
 
 ## Local non-Docker development
 

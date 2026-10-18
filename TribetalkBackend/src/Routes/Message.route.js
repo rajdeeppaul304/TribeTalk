@@ -16,6 +16,7 @@ router.use(verifyJWT);
 
 // Get message history for a channel (cursor-based pagination)
 router.get("/:channelId/messages/:messageId/thread", validate(channelMessageIdParamsSchema), verifyChannelAccess, messageController.getThread);
+router.get("/:channelId/messages/by-id/:messageId", validate(channelMessageIdParamsSchema), verifyChannelAccess, messageController.getMessageById);
 router.get("/:channelId/messages", validate(messageHistorySchema), verifyChannelAccess, messageController.getMessageHistory);
 
 // Mark channel as read

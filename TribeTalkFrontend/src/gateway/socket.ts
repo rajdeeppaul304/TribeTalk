@@ -8,11 +8,13 @@ class SocketGateway {
   private presenceHeartbeat: number | null = null
 
   connect(token: string) {
+    this.clearPresenceHeartbeat()
     this.socket?.disconnect()
     this.socket = io(env.socketUrl, {
       auth: { token }
     })
     this.socket.on("connect", () => {
+      this.clearPresenceHeartbeat()
       this.socket?.emit("presence_heartbeat")
       this.presenceHeartbeat = window.setInterval(() => {
         this.socket?.emit("presence_heartbeat")
@@ -62,6 +64,7 @@ class SocketGateway {
   }
   toggleReaction(messageId: string, emoji: string) { this.getSocket().emit("toggle_reaction", { messageId, emoji }) }
   togglePin(messageId: string) { this.getSocket().emit("toggle_pin", { messageId }) }
+  sendDirectMessage(payload: { conversationId: string; content: string; clientId?: string | null }) { this.getSocket().emit("send_direct_message", payload) }
 
   // ======================
   // Typing Events
@@ -139,7 +142,8 @@ class SocketGateway {
   onSyncMessages(handler: (data: { channelId: string; messages: Message[] }) => void) {
     this.socket?.on("sync_messages", handler)
   }
-  onNotification(handler: (data: { type: "mention" | "unread"; channelId: string; messageId: string }) => void) { this.socket?.on("notification", handler) }
+  onNotification(handler: (data: { type: "mention" | "unread" | "direct_message" | "moderation_warning" | "moderation_ban"; channelId?: string; messageId?: string; conversationId?: string; metadata?: { reason?: string; expiresAt?: string } }) => void) { this.socket?.on("notification", handler) }
+  onDirectMessage(handler: (message: unknown) => void) { this.socket?.on("direct_message", handler) }
 
   onChannelCreated(handler: (data: { channel: Channel; serverId: string }) => void) {
     this.socket?.on("channel_created", handler)
@@ -165,7 +169,7 @@ class SocketGateway {
   }
 
 
-  onError(handler: (data: { message: string; clientId?: string; channelId?: string }) => void) {
+  onError(handler: (data: { message: string; reason?: string; clientId?: string; channelId?: string }) => void) {
     this.socket?.on("error", handler)
   }
   onUnreadCounts(handler: (data: { [channelId: string]: number }) => void) {

@@ -10,6 +10,7 @@ button, input, textarea { font: inherit; } button { cursor: pointer; }
 .surface { background: rgba(27,30,33,.94); border: 1px solid rgba(213,243,242,.12); box-shadow: 0 16px 40px rgba(0,0,0,.18); }
 .soft-border { border-color: rgba(213,243,242,.12); }
 .field { width: 100%; border: 1px solid rgba(213,243,242,.16); border-radius: .65rem; background: #111315; color: #F1F5F4; padding: .7rem .85rem; outline: none; }
+.field.pl-10 { padding-left: 2.75rem; }
 .field:focus { border-color: #A8DADC; box-shadow: 0 0 0 3px rgba(168,218,220,.12); }
 .primary-button { border-radius: .65rem; background: #A8DADC; color: #111315; font-weight: 600; padding: .65rem 1rem; transition: background-color 160ms ease, transform 160ms ease; }
 .primary-button:hover { background: #D5F3F2; transform: translateY(-1px); }

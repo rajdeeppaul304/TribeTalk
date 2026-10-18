@@ -139,11 +139,15 @@ export function initializeMessageSync(dispatch: AppDispatch) {
   socketGateway.onError((error) => {
     console.error("❌ Socket error:", error.message)
 
-    if (error.clientId && error.channelId) dispatch(markMessageFailed({ channelId: error.channelId, clientId: error.clientId }))
+    if (error.clientId && error.channelId) dispatch(markMessageFailed({ channelId: error.channelId, clientId: error.clientId, reason: error.message }))
   })
   socketGateway.onNotification((notification) => {
     if (notification.type === "mention" && "Notification" in window && Notification.permission === "granted") {
       new Notification("You were mentioned in TribeTalk", { body: "Open TribeTalk to view the message." })
+    } else if (notification.type === "direct_message" && "Notification" in window && Notification.permission === "granted") {
+      new Notification("New direct message", { body: "You received a new direct message." })
+    } else if ((notification.type === "moderation_warning" || notification.type === "moderation_ban") && "Notification" in window && Notification.permission === "granted") {
+      new Notification(notification.type === "moderation_warning" ? "Server warning" : "Temporary server ban", { body: notification.metadata?.reason || "A moderation action was taken on your account." })
     }
   })
 

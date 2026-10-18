@@ -1,6 +1,7 @@
 // src/socket/PermissionService.js (or src/Service/Channel.service.js)
 import { Channel } from "../Models/Channel.model.js";
 import { Server } from "../Models/Server.model.js";
+import { ModerationAction } from "../Models/ModerationAction.model.js";
 
 export const getServerRole = (server, userId) => {
   const id = userId.toString();
@@ -20,6 +21,8 @@ export async function checkChannelAccess(userId, channelId) {
         const channel = await Channel.findById(channelId).select("server").lean();
         if (!channel || !channel.server) return false;
 
+        const activeBan = await ModerationAction.exists({ server: channel.server, targetUser: userId, type: "temporary_ban", revokedAt: null, expiresAt: { $gt: new Date() } });
+        if (activeBan) return false;
         // 2. Check if user is the owner, a moderator, or a member of the server
         const hasAccess = await Server.exists({
             _id: channel.server,

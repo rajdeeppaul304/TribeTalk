@@ -8,7 +8,7 @@ import { useReadState } from "../hooks/useReadState"
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver"
 import { useAuth } from "../features/auth/useAuth"
 import type { Message } from "../features/types"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useUploadImageMutation } from "../features/uploads/upload.api"
 import type { MessageAttachment } from "../features/types"
 import { ImagePlus, Pin, Send, X } from "lucide-react"
@@ -22,10 +22,14 @@ const RightContent = () => {
   const [attachmentError, setAttachmentError] = useState("")
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [showPinned, setShowPinned] = useState(false)
+  const [searchParams] = useSearchParams()
+  const targetMessageId = searchParams.get("messageId")
   const [uploadImage, { isLoading: isUploading }] = useUploadImageMutation()
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const suppressAutoScrollRef = useRef(false)
 
   const { user } = useAuth()
   const activeChannelId = useSelector(
@@ -54,6 +58,7 @@ const RightContent = () => {
     handleTyping,
     typingUsers,
     loadOlderMessages,
+    loadMessageById,
   } = useMessages(activeChannelId)
 
   // Track if messages container is visible in viewport
@@ -70,6 +75,7 @@ const RightContent = () => {
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
+    if (suppressAutoScrollRef.current) return
     if (messagesContainerRef.current) {
       const container = messagesContainerRef.current
       const isScrolledToBottom =
@@ -129,6 +135,42 @@ const RightContent = () => {
     markAsRead()
   }
 
+  const jumpToMessage = (messageId: string) => {
+    const container = messagesContainerRef.current
+    const target = messageRefs.current[messageId]
+    if (!container || !target) return
+    const containerRect = container.getBoundingClientRect()
+    const targetRect = target.getBoundingClientRect()
+    const targetTop = container.scrollTop + (targetRect.top - containerRect.top) - 12
+    container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" })
+    target.classList.add("ring-1", "ring-accent")
+    window.setTimeout(() => target.classList.remove("ring-1", "ring-accent"), 1200)
+  }
+
+  useEffect(() => {
+    if (!targetMessageId || !activeChannelId || !messages.length) return
+    let cancelled = false
+    const locate = async () => {
+      suppressAutoScrollRef.current = true
+      for (let attempt = 0; attempt < 12 && !cancelled; attempt += 1) {
+        if (messageRefs.current[targetMessageId]) {
+          jumpToMessage(targetMessageId)
+          suppressAutoScrollRef.current = false
+          return
+        }
+        const result = await loadOlderMessages()
+        if (!result || result.count === 0) break
+      }
+      if (!cancelled && !messageRefs.current[targetMessageId]) {
+        await loadMessageById(targetMessageId)
+        window.setTimeout(() => { if (!cancelled) jumpToMessage(targetMessageId) }, 80)
+      }
+      suppressAutoScrollRef.current = false
+    }
+    const timer = window.setTimeout(() => void locate(), 80)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [targetMessageId, activeChannelId, messages.length, loadMessageById])
+
   // Handle edit message
   const handleStartEdit = (message: Message) => {
     startEdit(message.id)
@@ -169,7 +211,7 @@ const RightContent = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-ink">
-      {messages.some((message) => message.pinnedAt) && <div className="flex items-center gap-2 border-b soft-border bg-panel px-5 py-2 text-sm"><Pin size={15} className="text-accent"/><button onClick={() => setShowPinned(!showPinned)} className="text-[#c0c8c7]">{messages.filter((message) => message.pinnedAt).length} pinned message{messages.filter((message) => message.pinnedAt).length === 1 ? "" : "s"}</button>{showPinned && <span className="ml-2 truncate text-[#899493]">{messages.find((message) => message.pinnedAt)?.content}</span>}</div>}
+      {messages.some((message) => message.pinnedAt) && <div className="flex items-center gap-2 border-b soft-border bg-panel px-5 py-2 text-sm"><Pin size={15} className="text-accent"/><button onClick={() => setShowPinned(!showPinned)} className="text-[#c0c8c7]">{messages.filter((message) => message.pinnedAt).length} pinned message{messages.filter((message) => message.pinnedAt).length === 1 ? "" : "s"}</button>{showPinned && <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">{messages.filter((message) => message.pinnedAt).map((message) => <button key={message.id} onClick={() => jumpToMessage(message.id)} className="max-w-xs truncate rounded bg-ink px-2 py-1 text-left text-[#899493] hover:text-paper">{message.content || "Pinned attachment"}</button>)}</div>}</div>}
       {/* Messages List */}
       <div
         ref={messagesContainerRef}
@@ -209,6 +251,7 @@ const RightContent = () => {
               onReply={() => setReplyTo(msg)}
               onReact={(emoji) => toggleReaction(msg.id, emoji)}
               onPin={() => togglePin(msg.id)}
+              messageRef={(node) => { messageRefs.current[msg.id] = node }}
             />
           ))
         )}
@@ -274,6 +317,7 @@ interface MessageItemProps {
   onReply: () => void
   onReact: (emoji: string) => void
   onPin: () => void
+  messageRef: (node: HTMLDivElement | null) => void
 }
 
 const MessageItem = ({
@@ -291,6 +335,7 @@ const MessageItem = ({
   onReply,
   onReact,
   onPin,
+  messageRef,
 }: MessageItemProps) => {
   const navigate = useNavigate()
   const [showActions, setShowActions] = useState(false)
@@ -358,6 +403,7 @@ const MessageItem = ({
 
   return (
     <div
+      ref={messageRef}
       className={`group relative rounded-lg px-3 py-2 ${
         message.isFailed ? "border border-red-400/60 bg-red-400/5" : "hover:bg-white/[.035]"
       }`}
@@ -375,7 +421,7 @@ const MessageItem = ({
         {showSending && (
           <span className="text-xs text-yellow-500">Sending...</span>
         )}
-        {message.isFailed && <button onClick={onRetry} className="text-xs text-red-300 hover:text-red-200">Failed — retry</button>}
+      {message.isFailed && <button onClick={onRetry} title={message.failureReason} className="text-xs text-red-300 hover:text-red-200">Failed — retry{message.failureReason ? ` (${message.failureReason})` : ""}</button>}
       </div>
 
       {message.content && <p className={`mt-1 text-sm leading-6 text-[#d9e1df] ${message.deletedAt ? "italic text-[#899493]" : ""}`}>{message.content}</p>}

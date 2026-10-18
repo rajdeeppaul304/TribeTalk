@@ -3,6 +3,7 @@ import * as channelRepo from "../Repository/Channel.repository.js";
 import { ApiError } from "../Utils/ApiError.js";
 import { eventBus } from "../events/eventBus.js";
 import { EVENTS } from "../events/eventNames.js";
+import { AuditLog } from "../Models/AuditLog.model.js";
 
 // Internal helper for owner/moderator privileges
 const assertCanManageChannel = (server, userId) => {
@@ -49,6 +50,8 @@ export const createChannel = async ({ name, serverId, description, userId }) => 
         description: description?.trim() || ""
     });
 
+    await AuditLog.create({ server: serverId, actor: userId, action: "channel.created", targetId: newChannel._id.toString(), metadata: { name: newChannel.name, description: newChannel.description } });
+
     // 📢 Fire internal domain event (Services stay pure, broadcasters handle the socket)
     eventBus.emit(EVENTS.CHANNEL_CREATED, {
         channel: newChannel,
@@ -67,6 +70,8 @@ export const deleteChannel = async ({ channelId, userId }) => {
 
     assertCanManageChannel(channel.server, userId);
 
+    await AuditLog.create({ server: channel.server._id, actor: userId, action: "channel.deleted", targetId: channelId.toString(), metadata: { name: channel.name } });
+
     await channelRepo.deleteChannelDoc(channelId);
     return true;
 };
@@ -79,6 +84,8 @@ export const editChannel = async ({ channelId, name, description, userId }) => {
 
     assertCanManageChannel(channel.server, userId);
 
+    const previous = { name: channel.name, description: channel.description };
+
     if (name) {
         channel.name = name.trim().toLowerCase();
     }
@@ -88,6 +95,8 @@ export const editChannel = async ({ channelId, name, description, userId }) => {
     }
 
     const updated = await channelRepo.saveChannelDoc(channel);
+
+    await AuditLog.create({ server: channel.server._id, actor: userId, action: "channel.updated", targetId: channelId.toString(), metadata: { before: previous, after: { name: updated.name, description: updated.description } } });
 
     return {
         _id: updated._id,

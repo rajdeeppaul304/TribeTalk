@@ -1,6 +1,6 @@
 // features/servers/server.api.ts
 import { baseApi } from "../api/baseApi"
-import type { ServerSummary, ServerFull, Invite } from "../types"
+import type { ServerSummary, ServerFull, Invite, ModerationAction } from "../types"
 
 type ApiResponse<T> = {
   statusCode: number
@@ -89,6 +89,30 @@ export const serverApi = baseApi.injectEndpoints({
       query: ({ serverId, memberId }) => ({ url: `/server/${serverId}/members/${memberId}`, method: "DELETE" }),
       invalidatesTags: (_result, _error, { serverId }) => [{ type: "Servers", id: serverId }, { type: "Servers", id: "LIST" }],
     }),
+    getAuditLogs: builder.query<any[], string>({
+      query: (serverId) => `/server/${serverId}/audit-logs`,
+      transformResponse: (response: ApiResponse<any[]>) => response.data,
+      providesTags: (_result, _error, serverId) => [{ type: "Moderation", id: `AUDIT-${serverId}` }],
+    }),
+    getModerationActions: builder.query<ModerationAction[], string>({
+      query: (serverId) => `/server/${serverId}/moderation-actions`,
+      transformResponse: (response: ApiResponse<ModerationAction[]>) => response.data,
+      providesTags: (_result, _error, serverId) => [{ type: "Moderation", id: serverId }],
+    }),
+    warnMember: builder.mutation<ModerationAction, { serverId: string; memberId: string; reason: string }>({
+      query: ({ serverId, memberId, reason }) => ({ url: `/server/${serverId}/members/${memberId}/warnings`, method: "POST", body: { reason } }),
+      transformResponse: (response: ApiResponse<ModerationAction>) => response.data,
+      invalidatesTags: (_result, _error, { serverId }) => [{ type: "Moderation", id: serverId }, { type: "Moderation", id: `AUDIT-${serverId}` }],
+    }),
+    banMember: builder.mutation<ModerationAction, { serverId: string; memberId: string; durationMinutes: number; reason: string }>({
+      query: ({ serverId, memberId, durationMinutes, reason }) => ({ url: `/server/${serverId}/members/${memberId}/ban`, method: "POST", body: { durationMinutes, reason } }),
+      transformResponse: (response: ApiResponse<ModerationAction>) => response.data,
+      invalidatesTags: (_result, _error, { serverId }) => [{ type: "Moderation", id: serverId }, { type: "Moderation", id: `AUDIT-${serverId}` }, { type: "Servers", id: serverId }, { type: "Servers", id: "LIST" }],
+    }),
+    unbanMember: builder.mutation<void, { serverId: string; memberId: string }>({
+      query: ({ serverId, memberId }) => ({ url: `/server/${serverId}/members/${memberId}/ban`, method: "DELETE" }),
+      invalidatesTags: (_result, _error, { serverId }) => [{ type: "Moderation", id: serverId }, { type: "Moderation", id: `AUDIT-${serverId}` }, { type: "Servers", id: serverId }, { type: "Servers", id: "LIST" }],
+    }),
   }),
 })
 
@@ -103,4 +127,9 @@ export const {
   useRevokeInviteMutation,
   useSetMemberRoleMutation,
   useRemoveMemberMutation,
+  useGetAuditLogsQuery,
+  useGetModerationActionsQuery,
+  useWarnMemberMutation,
+  useBanMemberMutation,
+  useUnbanMemberMutation,
 } = serverApi

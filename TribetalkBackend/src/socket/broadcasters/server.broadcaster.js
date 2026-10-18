@@ -8,4 +8,7 @@ export function initServerBroadcaster(io) {
         io.in(`user:${userId}`).socketsJoin(`server:${serverId}`);
         console.log(`📡 User ${userId} joined server:${serverId}`);
     });
+  eventBus.on(EVENTS.MODERATION_ACTION, ({ targetUserId, type, serverId, reason, expiresAt }) => {
+    io.to(`user:${targetUserId}`).emit("notification", { type, serverId, metadata: { reason, expiresAt } });
+  });
 }

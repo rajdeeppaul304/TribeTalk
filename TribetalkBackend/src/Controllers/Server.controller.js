@@ -130,3 +130,19 @@ export const listAuditLogs = asyncHandler(async (req, res) => {
     const logs = await serverService.listAuditLogs({ serverId: req.params.id, userId: req.user._id });
     return res.json(new ApiResponse(200, logs, "Audit log retrieved"));
 });
+export const warnMember = asyncHandler(async (req, res) => {
+    const action = await serverService.warnMember({ serverId: req.params.id, memberId: req.params.memberId, userId: req.user._id, reason: req.body.reason });
+    return res.status(201).json(new ApiResponse(201, action, "Member warning created"));
+});
+export const banMember = asyncHandler(async (req, res) => {
+    const action = await serverService.banMember({ serverId: req.params.id, memberId: req.params.memberId, userId: req.user._id, durationMinutes: req.body.durationMinutes, reason: req.body.reason });
+    return res.status(201).json(new ApiResponse(201, action, "Member temporarily banned"));
+});
+export const unbanMember = asyncHandler(async (req, res) => {
+    await serverService.unbanMember({ serverId: req.params.id, memberId: req.params.memberId, userId: req.user._id });
+    return res.json(new ApiResponse(200, null, "Member ban revoked"));
+});
+export const listModerationActions = asyncHandler(async (req, res) => {
+    const actions = await serverService.listModerationActions({ serverId: req.params.id, userId: req.user._id });
+    return res.json(new ApiResponse(200, actions, "Moderation history retrieved"));
+});

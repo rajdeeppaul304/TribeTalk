@@ -28,6 +28,12 @@ export const refreshTokenSchema = z.object({
   query: z.object({}),
 });
 
+const otpBody = z.object({ email: z.string().trim().email().max(254), otp: z.string().regex(/^\d{6}$/, "OTP must be six digits") });
+export const requestEmailVerificationSchema = z.object({ body: z.object({ email: z.string().trim().email().max(254) }), params: z.object({}), query: z.object({}) });
+export const verifyEmailSchema = z.object({ body: otpBody, params: z.object({}), query: z.object({}) });
+export const requestPasswordResetSchema = z.object({ body: z.object({ email: z.string().trim().email().max(254) }), params: z.object({}), query: z.object({}) });
+export const resetPasswordSchema = z.object({ body: otpBody.extend({ password: z.string().min(8).max(72) }), params: z.object({}), query: z.object({}) });
+
 export const updateProfileSchema = z.object({
   body: z.object({
     displayName: z.string().trim().min(1).max(50).optional(),
@@ -79,6 +85,16 @@ export const createInviteSchema = z.object({
 export const inviteIdParamsSchema = z.object({ body: z.object({}), params: z.object({ id: objectId, inviteId: objectId }), query: z.object({}) });
 export const memberRoleSchema = z.object({ body: z.object({ role: z.enum(["member", "moderator"]) }), params: z.object({ id: objectId, memberId: objectId }), query: z.object({}) });
 export const memberIdParamsSchema = z.object({ body: z.object({}), params: z.object({ id: objectId, memberId: objectId }), query: z.object({}) });
+export const moderationWarningSchema = z.object({
+  body: z.object({ reason: z.string().trim().min(3).max(500) }),
+  params: z.object({ id: objectId, memberId: objectId }),
+  query: z.object({}),
+});
+export const temporaryBanSchema = z.object({
+  body: z.object({ durationMinutes: z.coerce.number().int().min(1).max(30 * 24 * 60), reason: z.string().trim().min(3).max(500) }),
+  params: z.object({ id: objectId, memberId: objectId }),
+  query: z.object({}),
+});
 
 export const createChannelSchema = z.object({
   body: z.object({
@@ -140,5 +156,17 @@ export const searchMessagesSchema = z.object({
   query: z.object({
     q: z.string().trim().min(2).max(200),
     limit: z.coerce.number().int().min(1).max(50).optional().default(20),
+    channelId: objectId.optional(),
+    senderId: objectId.optional(),
+    from: z.string().datetime().optional(),
+    to: z.string().datetime().optional(),
+    hasAttachments: z.enum(["true", "false"]).transform((value) => value === "true").optional(),
   }),
 });
+
+export const createConversationSchema = z.object({ body: z.object({ participantId: objectId }), params: z.object({}), query: z.object({}) });
+export const conversationIdSchema = z.object({ body: z.object({}), params: z.object({ id: objectId }), query: z.object({ limit: z.coerce.number().int().min(1).max(100).optional(), before: z.string().datetime().optional() }) });
+export const directMessageSchema = z.object({ body: z.object({ content: z.string().trim().min(1).max(2000), clientId: z.string().max(100).nullable().optional() }), params: z.object({ id: objectId }), query: z.object({}) });
+export const scheduleMessageSchema = z.object({ body: z.object({ channelId: objectId, content: z.string().trim().min(1).max(2000), scheduledFor: z.string().datetime() }), params: z.object({}), query: z.object({}) });
+export const listScheduledMessagesSchema = z.object({ body: z.object({}), params: z.object({ channelId: objectId }), query: z.object({}) });
+export const cancelScheduledMessageSchema = z.object({ body: z.object({}), params: z.object({ id: objectId }), query: z.object({}) });

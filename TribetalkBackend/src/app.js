@@ -20,9 +20,10 @@ const app = express()
 app.set("trust proxy", 2)
 app.use(pinoHttp({ logger, genReqId: (req, res) => req.headers["x-request-id"] || randomUUID(), customLogLevel: (_req, res, error) => error || res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info" }))
 app.use((req, res, next) => {
+    const startedAt = process.hrtime.bigint()
     metrics.increment("httpRequests")
     res.setHeader("X-Request-ID", req.id)
-    res.on("finish", () => { if (res.statusCode >= 400) metrics.increment("httpErrors") })
+    res.on("finish", () => { metrics.observeHttp(Number(process.hrtime.bigint() - startedAt) / 1_000_000, res.statusCode) })
     next()
 })
 app.use(helmet({
@@ -58,6 +59,11 @@ app.get("/api/health", (_req, res) => {
     })
 })
 
+app.get("/api/metrics", (req, res) => {
+    if (!env.METRICS_TOKEN || (req.get("x-metrics-token") !== env.METRICS_TOKEN && req.query.token !== env.METRICS_TOKEN)) return res.status(401).json({ message: "Metrics access denied" })
+    void metrics.prometheus().then((body) => { res.setHeader("Content-Type", "text/plain; version=0.0.4"); res.send(body) }).catch(() => res.status(503).send("metrics unavailable"))
+})
+
 app.post("/api/admin/login", (req, res) => {
     if (!env.ADMIN_PASSWORD || req.body?.password !== env.ADMIN_PASSWORD) return res.status(401).json({ message: "Invalid admin password" })
     createAdminSession(res)
@@ -80,6 +86,8 @@ import channelRouter from './Routes/Channel.route.js'
 import messageRouter from './Routes/Message.route.js'
 import uploadRouter from './Routes/Upload.route.js'
 import searchRouter from './Routes/Search.route.js'
+import directMessageRouter from './Routes/DirectMessage.route.js'
+import scheduledMessageRouter from './Routes/ScheduledMessage.route.js'
 
 //routes usage
 app.use("/api/v1", apiLimiter)
@@ -89,6 +97,8 @@ app.use("/api/v1/channels", channelRouter)
 app.use("/api/v1/messages", messageRouter)
 app.use("/api/v1/uploads", uploadRouter)
 app.use("/api/v1/search", searchRouter)
+app.use("/api/v1/direct-messages", directMessageRouter)
+app.use("/api/v1/scheduled-messages", scheduledMessageRouter)
 
 app.use((req, res) => {
     res.status(404).json({

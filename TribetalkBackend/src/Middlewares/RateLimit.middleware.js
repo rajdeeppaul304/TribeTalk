@@ -1,6 +1,7 @@
 import { rateLimit } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
 import { getRedisClient } from "../config/redis.js";
+import { env } from "../config/env.js";
 
 const jsonLimitMessage = (message) => ({
   statusCode: 429,
@@ -36,4 +37,5 @@ export const authLimiter = rateLimit({
   message: jsonLimitMessage("Too many authentication attempts. Please try again later."),
   store: createRedisStore("tribetalk:rate:auth:"),
   passOnStoreError: true,
+  skip: (req) => env.NODE_ENV === "development" && env.LOAD_TEST_MODE && env.LOAD_TEST_KEY && req.get("x-tribetalk-load-test") === env.LOAD_TEST_KEY,
 });

@@ -16,6 +16,8 @@ interface UseReadStateProps {
 export function useReadState({ channelId, messages, isVisible }: UseReadStateProps) {
   const lastReadMessageIdRef = useRef<string | null>(null)
   const markAsReadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastReadSentAtRef = useRef(0)
+  const persistedMessageId = () => [...messages].reverse().find((message) => /^[a-f\d]{24}$/i.test(message.id))?.id
 
   /**
    * Reset tracking ref and pending timer when switching channels
@@ -41,13 +43,15 @@ export function useReadState({ channelId, messages, isVisible }: UseReadStatePro
 
       // Debounce by 1 second to bundle rapid bursts of incoming messages
       markAsReadTimeoutRef.current = setTimeout(() => {
-        const lastMessageId = messageId || messages[messages.length - 1]?.id
+        const lastMessageId = messageId && /^[a-f\d]{24}$/i.test(messageId) ? messageId : persistedMessageId()
 
         if (lastMessageId && lastMessageId !== lastReadMessageIdRef.current) {
           console.log(`✅ Marking channel ${channelId} as read up to ${lastMessageId}`)
 
           // Rely exclusively on WebSocket; backend persists via Message.service
+          if (Date.now() - lastReadSentAtRef.current < 750) return
           socketGateway.markAsRead(channelId, lastMessageId)
+          lastReadSentAtRef.current = Date.now()
           lastReadMessageIdRef.current = lastMessageId
         }
       }, 1000)
@@ -57,15 +61,6 @@ export function useReadState({ channelId, messages, isVisible }: UseReadStatePro
 
   /**
    * Mark as read when new messages arrive and user is viewing the channel
-   */
-  useEffect(() => {
-    if (channelId && messages.length > 0 && isVisible) {
-      markAsRead()
-    }
-  }, [channelId, messages.length, isVisible, markAsRead])
-
-  /**
-   * Mark as read when channel first opens
    */
   useEffect(() => {
     if (channelId && messages.length > 0 && isVisible) {
@@ -106,7 +101,7 @@ export function useReadState({ channelId, messages, isVisible }: UseReadStatePro
   const manualMarkAsRead = useCallback(() => {
     if (!channelId || messages.length === 0) return
 
-    const lastMessageId = messages[messages.length - 1]?.id
+    const lastMessageId = persistedMessageId()
     if (!lastMessageId) return
 
     if (markAsReadTimeoutRef.current) {
@@ -114,7 +109,9 @@ export function useReadState({ channelId, messages, isVisible }: UseReadStatePro
       markAsReadTimeoutRef.current = null
     }
 
+    if (Date.now() - lastReadSentAtRef.current < 750) return
     socketGateway.markAsRead(channelId, lastMessageId)
+    lastReadSentAtRef.current = Date.now()
     lastReadMessageIdRef.current = lastMessageId
   }, [channelId, messages])
 

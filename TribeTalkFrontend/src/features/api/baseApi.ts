@@ -19,6 +19,6 @@ const baseQueryWithErrorHandling: BaseQueryFn<
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithErrorHandling,
-  tagTypes: ["Servers", "Channels", "Messages"], // UPDATED: Added Messages
+  tagTypes: ["Servers", "Channels", "Messages", "Moderation"], // UPDATED: Added Messages
   endpoints: () => ({})
 })

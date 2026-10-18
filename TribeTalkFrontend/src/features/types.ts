@@ -40,6 +40,18 @@ export interface ServerFull extends ServerSummary {
 
 export interface Invite { _id: string; code: string; expiresAt: string | null; maxUses: number | null; uses: number; revokedAt: string | null; createdAt: string }
 
+export interface ModerationAction {
+  _id: string
+  server: string
+  targetUser: ServerMember
+  actor: ServerMember
+  type: "warning" | "temporary_ban"
+  reason: string
+  expiresAt: string | null
+  revokedAt: string | null
+  createdAt: string
+}
+
 // UPDATED: Complete message type with all backend fields
 export interface Message {
   id: string                    // MongoDB _id
@@ -58,6 +70,7 @@ export interface Message {
   deletedAt?: string            // For soft deletes
   isPending?: boolean           // Local-only flag for optimistic updates
   isFailed?: boolean            // Local-only flag for failed sends
+  failureReason?: string       // Local-only explanation for a failed send
   attachments?: MessageAttachment[]
   replyTo?: string | null
   threadRoot?: string | null

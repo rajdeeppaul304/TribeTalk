@@ -1,0 +1,22 @@
+{
+  "title": "TribeTalk - Local horizontal scale",
+  "uid": "tribetalk-local-scale",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    { "id": 1, "type": "timeseries", "title": "HTTP requests by backend replica", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }, "targets": [{ "expr": "sum by (replica) (rate(tribetalk_http_requests_total[1m]))", "legendFormat": "{{replica}}" }], "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] } },
+    { "id": 2, "type": "timeseries", "title": "HTTP errors by backend replica", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }, "targets": [{ "expr": "sum by (replica) (rate(tribetalk_http_errors_total[1m]))", "legendFormat": "{{replica}}" }], "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] } },
+    { "id": 3, "type": "timeseries", "title": "Active sockets by backend replica", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }, "targets": [{ "expr": "tribetalk_active_sockets", "legendFormat": "{{replica}}" }], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
+    { "id": 4, "type": "timeseries", "title": "Message throughput by backend replica", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }, "targets": [{ "expr": "sum by (replica) (rate(tribetalk_messages_sent_total[1m]))", "legendFormat": "{{replica}}" }], "fieldConfig": { "defaults": { "unit": "msg/s" }, "overrides": [] } },
+    { "id": 5, "type": "timeseries", "title": "Redis health and memory", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 }, "targets": [{ "expr": "redis_up", "legendFormat": "up" }, { "expr": "redis_memory_used_bytes", "legendFormat": "memory" }], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
+    { "id": 6, "type": "timeseries", "title": "MongoDB health and operations", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 }, "targets": [{ "expr": "mongodb_up", "legendFormat": "up" }, { "expr": "rate(mongodb_op_counters_total[1m])", "legendFormat": "{{type}}" }], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
+    { "id": 7, "type": "timeseries", "title": "Elasticsearch health and documents", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 }, "targets": [{ "expr": "elasticsearch_up", "legendFormat": "up" }, { "expr": "elasticsearch_indices_docs", "legendFormat": "{{name}}" }], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
+    { "id": 8, "type": "logs", "title": "Live container logs", "datasource": "Loki", "gridPos": { "h": 10, "w": 24, "x": 0, "y": 24 }, "targets": [{ "expr": "{job=\"docker\"}" }], "options": { "showTime": true, "sortOrder": "Descending", "wrapLines": false } },
+    { "id": 9, "type": "timeseries", "title": "Dependency request rate", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 }, "targets": [{ "expr": "sum by (dependency, operation, status) (rate(tribetalk_dependency_requests_total[1m]))", "legendFormat": "{{dependency}}/{{operation}} ({{status}})" }], "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] } },
+    { "id": 10, "type": "timeseries", "title": "Dependency latency p95", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 }, "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, dependency, operation) (rate(tribetalk_dependency_duration_seconds_bucket[5m])))", "legendFormat": "{{dependency}}/{{operation}}" }], "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] } },
+    { "id": 11, "type": "timeseries", "title": "Failed dependency requests", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 42 }, "targets": [{ "expr": "sum by (dependency, operation) (rate(tribetalk_dependency_errors_total[1m]))", "legendFormat": "{{dependency}}/{{operation}}" }], "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] } },
+    { "id": 12, "type": "timeseries", "title": "MongoDB connection pool", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 42 }, "targets": [{ "expr": "tribetalk_mongodb_connection_pool_size", "legendFormat": "pool size" }, { "expr": "tribetalk_mongodb_connection_pool_checked_out", "legendFormat": "checked out" }], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } }
+  ]
+}

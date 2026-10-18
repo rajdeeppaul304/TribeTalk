@@ -49,7 +49,13 @@ const userSchema = new Schema(
             maxlength: 300,
             default: ""
         },
+        emailVerifiedAt: { type: Date, default: null },
         lastSeenAt: { type: Date, default: null },
+        lastLoginAt: { type: Date, default: null },
+        lastLoginIp: { type: String, default: null },
+        lastLoginUserAgent: { type: String, default: null },
+        failedLoginAttempts: { type: Number, default: 0 },
+        loginLockedUntil: { type: Date, default: null },
         notificationPreferences: {
             browser: { type: Boolean, default: true },
             mentions: { type: Boolean, default: true },
@@ -74,12 +80,13 @@ userSchema.methods.isPasswordCorrect = async function(password){
     return await bcrypt.compare(password, this.password)
 }
 
-userSchema.methods.generateAccessToken = function(){
+userSchema.methods.generateAccessToken = function(sessionId){
     return jwt.sign(
         {
             _id: this._id,
             email: this.email,
             username: this.username,
+            sid: sessionId,
             // fullName: this.fullName
         },
         process.env.ACCESS_TOKEN_SECRET,
@@ -88,10 +95,11 @@ userSchema.methods.generateAccessToken = function(){
         }
     )
 }
-userSchema.methods.generateRefreshToken = function(){
+userSchema.methods.generateRefreshToken = function(sessionId){
     return jwt.sign(
         {
             _id: this._id,
+            sid: sessionId,
             
         },
         process.env.REFRESH_TOKEN_SECRET,

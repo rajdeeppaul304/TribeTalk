@@ -19,6 +19,7 @@ const cloudinaryConfigured = Boolean(
 );
 
 export const env = {
+  NODE_ENV: process.env.NODE_ENV || "development",
   PORT: port,
   CORS_ORIGIN: process.env.CORS_ORIGIN || "http://localhost:5173",
   COOKIE_SECURE: cookieSecure,
@@ -30,4 +31,10 @@ export const env = {
   ELASTICSEARCH_URL: process.env.ELASTICSEARCH_URL || "",
   METRICS_TOKEN: process.env.METRICS_TOKEN || "",
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "",
+  RESEND_API_KEY: process.env.RESEND_API_KEY || "",
+  EMAIL_FROM: process.env.EMAIL_FROM || "",
+  APP_URL: process.env.APP_URL || "http://localhost:5173",
+  EMAIL_VERIFICATION_REQUIRED: process.env.EMAIL_VERIFICATION_REQUIRED === "true",
+  LOAD_TEST_MODE: process.env.LOAD_TEST_MODE === "true",
+  LOAD_TEST_KEY: process.env.LOAD_TEST_KEY || "",
 };

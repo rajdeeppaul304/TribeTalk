@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: tribetalk-backend
+    metrics_path: /api/metrics
+    params:
+      token: ["replace-with-metrics-token"]
+    static_configs:
+      - targets: ["backend-1:3000"]
+        labels: { replica: backend-1 }
+      - targets: ["backend-2:3000"]
+        labels: { replica: backend-2 }
+
+  - job_name: redis
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  - job_name: mongodb
+    static_configs:
+      - targets: ["mongodb-exporter:9216"]
+
+  - job_name: elasticsearch
+    static_configs:
+      - targets: ["elasticsearch-exporter:9114"]

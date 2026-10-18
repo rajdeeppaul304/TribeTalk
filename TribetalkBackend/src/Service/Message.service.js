@@ -102,6 +102,13 @@ export const getMessageHistory = async ({ channelId, limit = 50, before = null, 
   return await messageRepo.getMessages({ channelId, limit, before, after });
 };
 
+export const getMessageById = async ({ channelId, messageId, userId }) => {
+  await assertChannelAccess(userId, channelId);
+  const message = await messageRepo.findMessageByIdAndChannel(messageId, channelId);
+  if (!message) throw new ApiError(404, "Message not found");
+  return message.populate("sender", "username avatar");
+};
+
 /**
  * Get messages since a specific sequence (for reconnect/sync)
  */

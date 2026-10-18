@@ -175,7 +175,7 @@ const messageSlice = createSlice({
      */
     markMessageFailed(
       state,
-      action: PayloadAction<{ channelId: string; clientId: string }>
+      action: PayloadAction<{ channelId: string; clientId: string; reason?: string }>
     ) {
       const { channelId, clientId } = action.payload
       const messages = state.messagesByChannel[channelId]
@@ -185,6 +185,7 @@ const messageSlice = createSlice({
       if (message) {
         message.isFailed = true
         message.isPending = false
+        message.failureReason = action.payload.reason
       }
     },
     markMessagePending(

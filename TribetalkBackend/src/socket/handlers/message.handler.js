@@ -8,6 +8,8 @@ import { z } from "zod";
 import { isTrustedCloudinaryAttachment } from "../../config/cloudinary.js";
 import { createMessageNotifications } from "../../Service/Notification.service.js";
 import { metrics } from "../../config/metrics.js";
+import * as directMessageService from "../../Service/DirectMessage.service.js";
+import { assertMessageNotSpam } from "../../Service/Spam.service.js";
 
 const attachmentSchema = z.object({
     url: z.string().url(),
@@ -29,7 +31,7 @@ const sendMessageSchema = z.object({
 });
 
 export default function registerMessageHandlers(io, socket) {
-    socket.on("send_message", async (payload) => {
+    socket.on("send_message", async (payload, acknowledge) => {
         const parsedPayload = sendMessageSchema.safeParse(payload);
         const clientId = parsedPayload.success ? parsedPayload.data.clientId : payload?.clientId;
         try {
@@ -41,6 +43,7 @@ export default function registerMessageHandlers(io, socket) {
                 throw new Error("Invalid image attachment");
             }
             const user = socket.user;
+            if (content.trim()) await assertMessageNotSpam({ userId: user._id, channelId, content });
 
             const savedMessage = await messageService.addMessage({
                 content,
@@ -65,6 +68,7 @@ export default function registerMessageHandlers(io, socket) {
 
             // The sender receives its clientId as an acknowledgement; peers do not.
             socket.emit("new_message", messageDTO);
+            if (typeof acknowledge === "function") acknowledge({ ok: true, message: messageDTO });
 
             socket.to(channelId).emit("new_message", {
                 ...messageDTO,
@@ -85,10 +89,26 @@ export default function registerMessageHandlers(io, socket) {
         } catch (error) {
             console.error("❌ Error in send_message:", error);
             socket.emit("error", {
-                message: "Failed to send message",
+                message: error?.message || "Failed to send message",
+                reason: error?.statusCode === 429 ? "spam" : undefined,
                 clientId,
                 channelId: parsedPayload.success ? parsedPayload.data.channelId : undefined,
             });
+            if (typeof acknowledge === "function") acknowledge({ ok: false, error: error?.message || "Failed to send message" });
+        }
+    });
+
+    socket.on("send_direct_message", async ({ conversationId, content, clientId = null }) => {
+        try {
+            const result = await directMessageService.sendDirectMessage({ conversationId, userId: socket.user._id, content, clientId });
+            const dto = result.message.toObject ? result.message.toObject() : result.message;
+            result.recipientIds.forEach((recipientId) => {
+                io.to(`user:${recipientId}`).emit("direct_message", dto);
+                io.to(`user:${recipientId}`).emit("notification", { type: "direct_message", conversationId, messageId: dto._id });
+            });
+            socket.emit("direct_message", dto);
+        } catch (error) {
+            socket.emit("error", { message: error.message || "Failed to send direct message", clientId, conversationId });
         }
     });
 

@@ -8,6 +8,7 @@ import setupGateway from "./socket/gateway.js";
 import { initializeRedis, shutdownRedis } from "./config/redis.js";
 import { initializeElasticsearch, shutdownElasticsearch, wasMessageIndexCreated } from "./config/elasticsearch.js";
 import { backfillMessageSearchIndex } from "./Service/Search.service.js";
+import { initializeQueues, shutdownQueues } from "./config/queues.js";
 
 let server;
 
@@ -31,6 +32,7 @@ const startServer = async () => {
     await connectDB();
     console.log("✅ MongoDB connected");
     const redisClients = await initializeRedis();
+    await initializeQueues();
     // `app.js` creates Redis-backed rate limiters during module loading.
     // Import it only after Redis is connected so the store is ready.
     const { app } = await import("./app.js");
@@ -56,6 +58,7 @@ const startServer = async () => {
 startServer();
 
 const shutdown = async () => {
+  await shutdownQueues();
   await shutdownRedis();
   await shutdownElasticsearch();
   if (server) server.close(() => process.exit(0));

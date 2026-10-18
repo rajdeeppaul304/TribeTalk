@@ -36,6 +36,11 @@ export const getMessageHistory = asyncHandler(async (req, res) => {
   );
 });
 
+export const getMessageById = asyncHandler(async (req, res) => {
+  const message = await messageService.getMessageById({ channelId: req.params.channelId, messageId: req.params.messageId, userId: req.user._id });
+  return res.json(new ApiResponse(200, message, "Message retrieved successfully"));
+});
+
 export const getThread = asyncHandler(async (req, res) => {
   const messages = await messageService.getThread({ channelId: req.params.channelId, rootId: req.params.messageId, userId: req.user._id });
   return res.json(new ApiResponse(200, messages, "Thread retrieved successfully"));

@@ -10,6 +10,7 @@ export interface User {
   updatedAt?: string
   lastSeenAt?: string | null
   notificationPreferences?: { browser?: boolean; mentions?: boolean; unread?: boolean }
+  emailVerifiedAt?: string | null
 }
 
 export interface PublicProfile {
@@ -25,12 +26,15 @@ export interface PublicProfile {
 
 export interface AppNotification {
   _id: string
-  type: "mention" | "unread"
-  channel: string
-  message: string
+  type: "mention" | "unread" | "direct_message" | "moderation_warning" | "moderation_ban"
+  channel?: string | null
+  message?: string | null
+  conversation?: string | null
+  directMessage?: string | null
   readAt?: string | null
   createdAt: string
   actor?: { username?: string }
+  metadata?: { reason?: string; expiresAt?: string }
 }
 
 
