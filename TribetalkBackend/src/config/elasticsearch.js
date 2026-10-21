@@ -8,7 +8,13 @@ let messageIndexCreated = false;
 
 if (env.ELASTICSEARCH_URL) {
   // Keep the JavaScript client on Elasticsearch 8.x to match the Docker service.
-  elasticsearchClient = new Client({ node: env.ELASTICSEARCH_URL });
+  // Search is an asynchronous side effect of sending a message. Keep failed
+  // Elasticsearch calls bounded so an outage cannot consume the message path.
+  elasticsearchClient = new Client({
+    node: env.ELASTICSEARCH_URL,
+    requestTimeout: 250,
+    maxRetries: 0,
+  });
 }
 
 export const initializeElasticsearch = async () => {

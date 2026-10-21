@@ -8,7 +8,10 @@ import { ReadState } from "../Models/ReadState.model.js";
 export const createMessage = async ({ content, sender, channel, clientId = null, isSystemMessage = false, attachments = [], replyTo = null, threadRoot = null }) => {
   if (clientId) {
     const existing = await Message.findOne({ channel, sender, clientId }).populate("sender", "username displayName avatar");
-    if (existing) return existing;
+    if (existing) {
+      existing._wasDuplicate = true;
+      return existing;
+    }
   }
   const updatedChannel = await Channel.findByIdAndUpdate(
     channel,
@@ -29,7 +32,9 @@ export const createMessage = async ({ content, sender, channel, clientId = null,
   } catch (error) {
     // A concurrent retry won the unique client-id race. Return its canonical message.
     if (error?.code === 11000 && clientId) {
-      return Message.findOne({ channel, sender, clientId }).populate("sender", "username displayName avatar");
+      const existing = await Message.findOne({ channel, sender, clientId }).populate("sender", "username displayName avatar");
+      if (existing) existing._wasDuplicate = true;
+      return existing;
     }
     throw error;
   }

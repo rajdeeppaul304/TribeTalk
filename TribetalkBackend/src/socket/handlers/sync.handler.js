@@ -1,5 +1,6 @@
 import * as messageService from "../../Service/Message.service.js";
 import { formatMessageDTO } from "../socket.utils.js";
+import { metrics } from "../../config/metrics.js";
 
 export default function registerSyncHandlers(io, socket) {
     // Unread counts badge sync
@@ -34,6 +35,7 @@ export default function registerSyncHandlers(io, socket) {
                 lastReceivedSequence,
                 socket.user._id
             );
+            metrics.recoverySync(missedMessages.length);
 
             socket.emit("sync_messages", {
                 channelId,

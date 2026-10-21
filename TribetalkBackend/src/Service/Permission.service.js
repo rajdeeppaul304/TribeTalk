@@ -5,9 +5,10 @@ import { ModerationAction } from "../Models/ModerationAction.model.js";
 
 export const getServerRole = (server, userId) => {
   const id = userId.toString();
-  if (server.owner.toString() === id) return "owner";
-  if ((server.moderators || []).some((member) => member.toString() === id)) return "moderator";
-  if ((server.members || []).some((member) => member.toString() === id)) return "member";
+  const asId = (value) => (value?._id ?? value)?.toString();
+  if (asId(server.owner) === id) return "owner";
+  if ((server.moderators || []).some((member) => asId(member) === id)) return "moderator";
+  if ((server.members || []).some((member) => asId(member) === id)) return "member";
   return null;
 };
 

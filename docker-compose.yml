@@ -39,7 +39,8 @@ services:
 
   backend:
     build:
-      context: ./TribetalkBackend
+      context: .
+      dockerfile: TribetalkBackend/Dockerfile
     restart: unless-stopped
     env_file:
       - ./TribetalkBackend/.env
@@ -85,6 +86,7 @@ services:
       - "9090:9090"
     volumes:
       - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/observability/tribetalk-alerts.yml:/etc/prometheus/tribetalk-alerts.yml:ro
       - prometheus-data:/prometheus
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
     depends_on:

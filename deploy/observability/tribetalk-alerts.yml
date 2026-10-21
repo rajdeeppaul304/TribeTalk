@@ -1,0 +1,38 @@
+groups:
+  - name: tribetalk-availability
+    rules:
+      - alert: TribeTalkBackendDown
+        expr: up{job=~"tribetalk-backend|backend"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "TribeTalk backend is down", description: "A backend scrape target has been unavailable for two minutes." }
+      - alert: TribeTalkHighHttpErrorRate
+        expr: sum(rate(tribetalk_http_errors_total[5m])) / clamp_min(sum(rate(tribetalk_http_requests_total[5m])), 1) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "HTTP error rate is above 5%", description: "More than 5% of recent HTTP responses are errors." }
+      - alert: TribeTalkRedisDependencyErrors
+        expr: sum(rate(tribetalk_dependency_errors_total{dependency="redis"}[5m])) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Redis dependency errors detected", description: "Redis operations have been failing continuously." }
+      - alert: TribeTalkElasticsearchDependencyErrors
+        expr: sum(rate(tribetalk_dependency_errors_total{dependency="elasticsearch"}[5m])) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Elasticsearch dependency errors detected", description: "Search or indexing operations have been failing continuously." }
+      - alert: TribeTalkHighMessageLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(tribetalk_dependency_duration_seconds_bucket{dependency="mongodb",operation=~".*message.*"}[5m]))) > 0.5
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Message dependency p95 latency is high", description: "Message-related MongoDB operations exceed 500ms p95." }
+      - alert: TribeTalkSocketEventErrors
+        expr: rate(tribetalk_socket_event_errors_total[5m]) > 1
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Socket event errors are elevated", description: "More than one socket event error per second is being observed." }
+      - alert: TribeTalkMongoPoolPressure
+        expr: tribetalk_mongodb_connection_pool_checked_out >= tribetalk_mongodb_connection_pool_size and tribetalk_mongodb_connection_pool_size > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "MongoDB connection pool is exhausted", description: "All currently-created MongoDB connections are checked out." }

@@ -35,10 +35,10 @@ export default function setupGateway(io, redisClients = null) {
             if (!becameOnline) return;
             const serverIds = await serverService.getServerRoomIds(userId);
             serverIds.forEach((id) => io.to(`server:${id}`).emit("presence_changed", { userId, online: true, lastSeenAt: null }));
-        });
+        }).catch((error) => logger.warn({ error: error.message, userId }, "Presence online update failed"));
 
         socket.on("presence_heartbeat", () => {
-            void refreshSocketPresence(userId, socket.id);
+            void refreshSocketPresence(userId, socket.id).catch((error) => logger.warn({ error: error.message, userId }, "Presence heartbeat failed"));
         });
 
         // Join every server room this user belongs to
@@ -79,7 +79,7 @@ export default function setupGateway(io, redisClients = null) {
                 await User.findByIdAndUpdate(userId, { $set: { lastSeenAt } });
                 const serverIds = await serverService.getServerRoomIds(userId);
                 serverIds.forEach((id) => io.to(`server:${id}`).emit("presence_changed", { userId, online: false, lastSeenAt }));
-            });
+            }).catch((error) => logger.warn({ error: error.message, userId }, "Presence offline update failed"));
         });
     });
 }

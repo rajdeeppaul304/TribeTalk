@@ -77,6 +77,7 @@ app.get("/api/admin/logs", requireAdminSession, (req, res) => {
     return res.json({ status: "ok", logs: getRecentLogs(req.query.limit) })
 })
 
+app.get("/api/docs/socket-events", (_req, res) => res.json(openapiSpecification["x-socketio"]))
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapiSpecification, { explorer: true }))
 
 //routes import

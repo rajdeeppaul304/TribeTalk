@@ -52,6 +52,10 @@ export const authApi = createApi({
       query: (userId) => `/users/${userId}/profile`,
       transformResponse: (response: ApiResponse<PublicProfile>) => response.data,
     }),
+    searchUsers: builder.query<PublicProfile[], { q: string; limit?: number }>({
+      query: ({ q, limit = 10 }) => `/users/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+      transformResponse: (response: ApiResponse<PublicProfile[]>) => response.data,
+    }),
     getNotifications: builder.query<AppNotification[], void>({
       query: () => "/users/notifications",
       transformResponse: (response: ApiResponse<AppNotification[]>) => response.data,
@@ -74,6 +78,7 @@ export const {
   useGetCurrentUserQuery,
   useUpdateProfileMutation,
   useGetPublicUserProfileQuery,
+  useLazySearchUsersQuery,
   useGetNotificationsQuery,
   useMarkNotificationsReadMutation,
 } = authApi

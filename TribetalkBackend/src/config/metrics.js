@@ -17,6 +17,14 @@ const dependencyErrors = new Counter({ name: "tribetalk_dependency_errors_total"
 const dependencyDuration = new Histogram({ name: "tribetalk_dependency_duration_seconds", help: "Dependency operation duration in seconds", labelNames: ["dependency", "operation"], buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5], registers: [registry] })
 const mongodbPoolCheckedOut = new Gauge({ name: "tribetalk_mongodb_connection_pool_checked_out", help: "MongoDB connections currently checked out by the driver", registers: [registry] })
 const mongodbPoolSize = new Gauge({ name: "tribetalk_mongodb_connection_pool_size", help: "MongoDB connections currently created in the pool", registers: [registry] })
+const cacheHits = new Counter({ name: "tribetalk_cache_hits_total", help: "Redis cache hits", labelNames: ["cache"], registers: [registry] })
+const cacheMisses = new Counter({ name: "tribetalk_cache_misses_total", help: "Redis cache misses or unavailable cache reads", labelNames: ["cache"], registers: [registry] })
+const cacheWrites = new Counter({ name: "tribetalk_cache_writes_total", help: "Redis cache writes", labelNames: ["cache", "status"], registers: [registry] })
+const messageDeliveryAttempts = new Counter({ name: "tribetalk_message_delivery_attempts_total", help: "Socket message delivery attempts", registers: [registry] })
+const messageDeliveryResults = new Counter({ name: "tribetalk_message_delivery_results_total", help: "Socket message delivery results", labelNames: ["status"], registers: [registry] })
+const duplicateMessages = new Counter({ name: "tribetalk_duplicate_messages_total", help: "Idempotent message retries detected", registers: [registry] })
+const messageAckDuration = new Histogram({ name: "tribetalk_message_ack_duration_seconds", help: "Time from send_message receipt to acknowledgement", buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5], registers: [registry] })
+const recoverySyncMessages = new Counter({ name: "tribetalk_recovery_sync_messages_total", help: "Messages returned by reconnect recovery sync", registers: [registry] })
 
 const counterMap = { httpRequests, httpErrors, socketConnections, messagesSent, socketEventErrors }
 
@@ -44,6 +52,14 @@ export const metrics = {
   },
   setMongoPoolCheckedOut(value) { mongodbPoolCheckedOut.set(Math.max(0, value)) },
   setMongoPoolSize(value) { mongodbPoolSize.set(Math.max(0, value)) },
+  cacheHit(cache) { cacheHits.inc({ cache }) },
+  cacheMiss(cache) { cacheMisses.inc({ cache }) },
+  cacheWrite(cache, status = "success") { cacheWrites.inc({ cache, status }) },
+  messageDeliveryAttempt() { messageDeliveryAttempts.inc() },
+  messageDeliveryResult(status) { messageDeliveryResults.inc({ status }) },
+  duplicateMessage() { duplicateMessages.inc() },
+  observeMessageAck(durationMs) { messageAckDuration.observe(durationMs / 1000) },
+  recoverySync(count) { recoverySyncMessages.inc(count) },
   snapshot() { return { ...counters, uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000) } },
   async prometheus() { return registry.metrics() },
 }

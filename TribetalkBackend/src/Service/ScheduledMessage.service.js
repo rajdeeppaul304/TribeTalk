@@ -7,6 +7,7 @@ import * as messageService from "./Message.service.js";
 import { eventBus } from "../events/eventBus.js";
 import { EVENTS } from "../events/eventNames.js";
 import { areQueuesReady } from "../config/queues.js";
+import { indexMessage } from "./Search.service.js";
 
 export const scheduleMessage = async ({ channelId, userId, content, scheduledFor }) => {
   if (!areQueuesReady()) throw new ApiError(503, "Scheduled messages require Redis and the job worker");
@@ -36,6 +37,7 @@ export const processScheduledMessage = async (scheduledId) => {
   if (!scheduled) return null;
   try {
     const message = await messageService.addMessage({ content: scheduled.content, channelId: scheduled.channel, UserId: scheduled.sender });
+    setImmediate(() => indexMessage(message).catch((error) => console.error("Failed to enqueue scheduled message indexing:", error.message)));
     await ScheduledMessage.updateOne({ _id: scheduledId }, { $set: { sentMessage: message._id } });
     eventBus.emit(EVENTS.SCHEDULED_MESSAGE_READY, { message });
     return message;

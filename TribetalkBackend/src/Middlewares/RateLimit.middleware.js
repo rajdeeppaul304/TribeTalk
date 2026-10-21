@@ -27,6 +27,7 @@ export const apiLimiter = rateLimit({
   message: jsonLimitMessage("Too many requests. Please try again later."),
   store: createRedisStore("tribetalk:rate:api:"),
   passOnStoreError: true,
+  skip: (req) => env.NODE_ENV === "development" && env.LOAD_TEST_MODE && env.LOAD_TEST_KEY && req.get("x-tribetalk-load-test") === env.LOAD_TEST_KEY,
 });
 
 export const authLimiter = rateLimit({

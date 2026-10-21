@@ -37,4 +37,5 @@ export const env = {
   EMAIL_VERIFICATION_REQUIRED: process.env.EMAIL_VERIFICATION_REQUIRED === "true",
   LOAD_TEST_MODE: process.env.LOAD_TEST_MODE === "true",
   LOAD_TEST_KEY: process.env.LOAD_TEST_KEY || "",
+  CACHE_ENABLED: process.env.CACHE_ENABLED !== "false",
 };

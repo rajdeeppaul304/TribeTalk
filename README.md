@@ -128,3 +128,6 @@ docker compose -f docker-compose.yml -f docker-compose.production.yml up --build
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for details.
 
+For the Vercel-frontend plus friend-laptop backend/observability demo, see the
+**Friend-laptop backend and observability demo** section in [DEPLOYMENT.md](DEPLOYMENT.md).
+

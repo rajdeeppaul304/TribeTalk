@@ -7,16 +7,22 @@ import App from "./App"
 import { AuthProvider } from "./app/AuthProvider"
 
 import { store } from "./app/store"
+import ErrorBoundary from "./components/ErrorBoundary"
+import { ToastProvider } from "./components/ToastProvider"
 
 
 ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 ).render(
   <Provider store={store}>
-    <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <ToastProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </BrowserRouter>
+      </ToastProvider>
+    </ErrorBoundary>
   </Provider>
 )

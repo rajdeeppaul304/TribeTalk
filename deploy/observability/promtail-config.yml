@@ -9,6 +9,8 @@ scrape_configs:
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
     relabel_configs:
+      - target_label: job
+        replacement: docker
       - source_labels: [__meta_docker_container_logpath]
         target_label: __path__
       - source_labels: [__meta_docker_container_name]
@@ -16,5 +18,9 @@ scrape_configs:
         target_label: container
       - source_labels: [__meta_docker_container_label_com_docker_compose_service]
         target_label: service
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project]
+        target_label: compose_project
+      - source_labels: [__meta_docker_container_id]
+        target_label: container_id
     pipeline_stages:
       - docker: {}

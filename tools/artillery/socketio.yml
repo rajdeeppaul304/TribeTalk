@@ -1,0 +1,32 @@
+config:
+  target: "http://localhost:8080"
+  phases:
+    - duration: 60
+      arrivalRate: 1
+      rampTo: 10
+      name: "Socket.IO smoke ramp"
+  engines:
+    socketio: {}
+  processor: "./socketio.processor.cjs"
+scenarios:
+  - name: "connect and join a channel"
+    engine: socketio
+    flow:
+      - function: "loadToken"
+      - connect:
+          auth:
+            token: "{{ token }}"
+            loadTestKey: "{{ loadTestKey }}"
+      - emit:
+          channel: "join_channel"
+          data:
+            channelId: "{{ channelId }}"
+            lastKnownSequence: 0
+      - function: "prepareMessage"
+      - emit:
+          channel: "send_message"
+          data:
+            channelId: "{{ channelId }}"
+            content: "{{ content }}"
+            clientId: "{{ clientId }}"
+      - think: 5

@@ -65,3 +65,8 @@ export const findPublicUserProfileById = async (userId) => {
         .select("_id username displayName avatar bio createdAt lastSeenAt")
         .lean();
 };
+
+export const searchPublicUsers = async (query, limit = 10) => User.find({ $or: [
+    { username: { $regex: query, $options: "i" } },
+    { displayName: { $regex: query, $options: "i" } },
+  ] }).select("_id username displayName avatar bio lastSeenAt").limit(Math.min(Number(limit) || 10, 25)).lean();

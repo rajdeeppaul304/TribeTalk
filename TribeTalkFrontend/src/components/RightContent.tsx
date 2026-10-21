@@ -8,11 +8,13 @@ import { useReadState } from "../hooks/useReadState"
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver"
 import { useAuth } from "../features/auth/useAuth"
 import type { Message } from "../features/types"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 import { useUploadImageMutation } from "../features/uploads/upload.api"
 import type { MessageAttachment } from "../features/types"
 import { ImagePlus, Pin, Send, X } from "lucide-react"
 import { useGetServerByIdQuery } from "../features/servers/server.api"
+import UserProfilePopover from "./UserProfilePopover"
+import { List } from "react-window"
 
 const RightContent = () => {
   const [messageInput, setMessageInput] = useState("")
@@ -32,6 +34,7 @@ const RightContent = () => {
   const suppressAutoScrollRef = useRef(false)
 
   const { user } = useAuth()
+  const currentUsername = user?.username
   const activeChannelId = useSelector(
     (state: RootState) => state.channel.activeChannelId
   )
@@ -234,7 +237,14 @@ const RightContent = () => {
             No messages yet. Be the first to send one!
           </p>
         ) : (
-          messages.map((msg) => (
+          messages.length > 80 ? <List
+            className="scrollbar"
+            rowCount={messages.length}
+            rowHeight={88}
+            overscanCount={8}
+            rowProps={{ messages, userId: user?._id, currentUsername, editingMessageId, editContent, setEditContent, handleStartEdit, handleSubmitEdit, handleCancelEdit, deleteMessage, retryMessage, setReplyTo, toggleReaction, togglePin, messageRefs }}
+            rowComponent={({ index, style, messages: rows, ...props }) => { const msg = rows[index]; return <div style={style}><MessageItem key={msg.id} message={msg} isOwn={msg.senderId === props.userId} currentUsername={props.currentUsername} isEditing={props.editingMessageId === msg.id} editContent={props.editContent} onEditContentChange={props.setEditContent} onStartEdit={() => props.handleStartEdit(msg)} onSubmitEdit={() => props.handleSubmitEdit(msg.id)} onCancelEdit={props.handleCancelEdit} onDelete={() => props.deleteMessage(msg.id)} onRetry={() => props.retryMessage(msg)} onReply={() => props.setReplyTo(msg)} onReact={(emoji) => props.toggleReaction(msg.id, emoji)} onPin={() => props.togglePin(msg.id)} messageRef={(node) => { props.messageRefs.current[msg.id] = node }} /></div> }}
+          /> : messages.map((msg) => (
             <MessageItem
               key={msg.id}
               message={msg}
@@ -337,7 +347,6 @@ const MessageItem = ({
   onPin,
   messageRef,
 }: MessageItemProps) => {
-  const navigate = useNavigate()
   const [showActions, setShowActions] = useState(false)
   const [hasWaitedToSend, setHasWaitedToSend] = useState(false)
 
@@ -411,10 +420,10 @@ const MessageItem = ({
       onMouseLeave={() => setShowActions(false)}
     >
       <div className="flex items-baseline gap-2">
-        <button onClick={() => navigate(`/profile/${message.senderId}`)} className="font-semibold text-accent hover:text-accent-soft hover:underline">
+        <UserProfilePopover userId={message.senderId} username={message.senderUsername || (isOwn ? currentUsername || "User" : `User ${message.senderId?.slice(-4)}`)}><button type="button" className="font-semibold text-accent hover:text-accent-soft hover:underline">
           {message.senderUsername ||
             (isOwn ? currentUsername : `User ${message.senderId?.slice(-4)}`)}
-        </button>
+        </button></UserProfilePopover>
         <span className="text-xs text-[#899493]">
           {formatTime(message.timestamp || message.createdAt)}
         </span>

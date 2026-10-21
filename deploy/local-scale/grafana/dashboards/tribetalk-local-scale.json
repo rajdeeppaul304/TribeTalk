@@ -1,22 +1,106 @@
 {
-  "title": "TribeTalk - Local horizontal scale",
+  "title": "TribeTalk · Local Scale Operations",
   "uid": "tribetalk-local-scale",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "5s",
   "time": { "from": "now-15m", "to": "now" },
+  "timezone": "browser",
+  "tags": ["tribetalk", "local-scale", "operations"],
+  "editable": true,
+  "graphTooltip": 1,
+  "templating": {
+    "list": [{
+      "name": "replica",
+      "label": "Backend replica",
+      "type": "query",
+      "datasource": "Prometheus",
+      "query": "label_values(tribetalk_http_requests_total, replica)",
+      "includeAll": true,
+      "multi": true,
+      "refresh": 1,
+      "current": { "text": "All", "value": ["$__all"] }
+    }]
+  },
   "panels": [
-    { "id": 1, "type": "timeseries", "title": "HTTP requests by backend replica", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }, "targets": [{ "expr": "sum by (replica) (rate(tribetalk_http_requests_total[1m]))", "legendFormat": "{{replica}}" }], "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] } },
-    { "id": 2, "type": "timeseries", "title": "HTTP errors by backend replica", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }, "targets": [{ "expr": "sum by (replica) (rate(tribetalk_http_errors_total[1m]))", "legendFormat": "{{replica}}" }], "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] } },
-    { "id": 3, "type": "timeseries", "title": "Active sockets by backend replica", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }, "targets": [{ "expr": "tribetalk_active_sockets", "legendFormat": "{{replica}}" }], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
-    { "id": 4, "type": "timeseries", "title": "Message throughput by backend replica", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }, "targets": [{ "expr": "sum by (replica) (rate(tribetalk_messages_sent_total[1m]))", "legendFormat": "{{replica}}" }], "fieldConfig": { "defaults": { "unit": "msg/s" }, "overrides": [] } },
-    { "id": 5, "type": "timeseries", "title": "Redis health and memory", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 }, "targets": [{ "expr": "redis_up", "legendFormat": "up" }, { "expr": "redis_memory_used_bytes", "legendFormat": "memory" }], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
-    { "id": 6, "type": "timeseries", "title": "MongoDB health and operations", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 }, "targets": [{ "expr": "mongodb_up", "legendFormat": "up" }, { "expr": "rate(mongodb_op_counters_total[1m])", "legendFormat": "{{type}}" }], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
-    { "id": 7, "type": "timeseries", "title": "Elasticsearch health and documents", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 }, "targets": [{ "expr": "elasticsearch_up", "legendFormat": "up" }, { "expr": "elasticsearch_indices_docs", "legendFormat": "{{name}}" }], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } },
-    { "id": 8, "type": "logs", "title": "Live container logs", "datasource": "Loki", "gridPos": { "h": 10, "w": 24, "x": 0, "y": 24 }, "targets": [{ "expr": "{job=\"docker\"}" }], "options": { "showTime": true, "sortOrder": "Descending", "wrapLines": false } },
-    { "id": 9, "type": "timeseries", "title": "Dependency request rate", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 }, "targets": [{ "expr": "sum by (dependency, operation, status) (rate(tribetalk_dependency_requests_total[1m]))", "legendFormat": "{{dependency}}/{{operation}} ({{status}})" }], "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] } },
-    { "id": 10, "type": "timeseries", "title": "Dependency latency p95", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 }, "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, dependency, operation) (rate(tribetalk_dependency_duration_seconds_bucket[5m])))", "legendFormat": "{{dependency}}/{{operation}}" }], "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] } },
-    { "id": 11, "type": "timeseries", "title": "Failed dependency requests", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 42 }, "targets": [{ "expr": "sum by (dependency, operation) (rate(tribetalk_dependency_errors_total[1m]))", "legendFormat": "{{dependency}}/{{operation}}" }], "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] } },
-    { "id": 12, "type": "timeseries", "title": "MongoDB connection pool", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 42 }, "targets": [{ "expr": "tribetalk_mongodb_connection_pool_size", "legendFormat": "pool size" }, { "expr": "tribetalk_mongodb_connection_pool_checked_out", "legendFormat": "checked out" }], "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] } }
+    { "id": 1, "type": "row", "title": "Service overview", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "collapsed": false, "panels": [] },
+    {
+      "id": 2, "type": "stat", "title": "Backend replicas up", "description": "Healthy backend replicas reporting metrics.", "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "count(up{job=\"tribetalk-backend\"} == 1)" }],
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 2 }] } }, "overrides": [] }, "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "area", "justifyMode": "center" }
+    },
+    {
+      "id": 3, "type": "stat", "title": "Active sockets", "description": "Sockets currently owned by all replicas.", "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "sum(tribetalk_active_sockets)" }],
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "color": { "mode": "palette-classic" } }, "overrides": [] }, "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "justifyMode": "center" }
+    },
+    {
+      "id": 4, "type": "stat", "title": "HTTP request rate", "description": "Combined API throughput.", "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "sum(rate(tribetalk_http_requests_total{replica=~\"$replica\"}[1m]))" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 1, "color": { "mode": "palette-classic" } }, "overrides": [] }, "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "justifyMode": "center" }
+    },
+    {
+      "id": 5, "type": "stat", "title": "HTTP error rate", "description": "Combined application error rate.", "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "sum(rate(tribetalk_http_errors_total{replica=~\"$replica\"}[1m]))" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.1 }, { "color": "red", "value": 1 }] } }, "overrides": [] }, "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "area", "justifyMode": "center" }
+    },
+    { "id": 6, "type": "row", "title": "Replica resources and traffic split", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }, "collapsed": false, "panels": [] },
+    {
+      "id": 7, "type": "timeseries", "title": "Backend memory working set", "description": "Actual container memory by backend replica. This is the value to compare with each Docker memory limit.", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [{ "refId": "A", "expr": "tribetalk_container_memory_working_set_bytes{replica=~\"$replica\"}", "legendFormat": "{{replica}} used" }, { "refId": "B", "expr": "tribetalk_container_memory_limit_bytes{replica=~\"$replica\"}", "legendFormat": "{{replica}} limit" }],
+      "fieldConfig": { "defaults": { "unit": "decbytes", "decimals": 1, "custom": { "lineWidth": 2, "fillOpacity": 15, "drawStyle": "line", "showPoints": "never" } }, "overrides": [] }, "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "Backend CPU usage", "description": "Container CPU utilization by replica; 1.0 is one fully-used CPU core.", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [{ "refId": "A", "expr": "rate(tribetalk_container_cpu_usage_seconds_total{replica=~\"$replica\"}[1m])", "legendFormat": "{{replica}}" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "decimals": 2, "custom": { "lineWidth": 2, "fillOpacity": 15, "drawStyle": "line", "showPoints": "never" } }, "overrides": [] }, "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "HTTP requests by replica", "description": "Traffic distribution through Nginx. Both replicas should receive traffic during a round-robin test.", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "targets": [{ "refId": "A", "expr": "sum by (replica) (rate(tribetalk_http_requests_total{replica=~\"$replica\"}[1m]))", "legendFormat": "{{replica}}" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 2, "fillOpacity": 10, "drawStyle": "line", "showPoints": "never" } }, "overrides": [] }, "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Active sockets by replica", "description": "Live socket ownership per backend replica.", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "targets": [{ "refId": "A", "expr": "tribetalk_active_sockets{replica=~\"$replica\"}", "legendFormat": "{{replica}}" }],
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "custom": { "lineWidth": 2, "fillOpacity": 10, "drawStyle": "line", "showPoints": "never" } }, "overrides": [] }, "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    { "id": 11, "type": "row", "title": "Dependencies and application performance", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 }, "collapsed": false, "panels": [] },
+    {
+      "id": 12, "type": "timeseries", "title": "Dependency request rate", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
+      "targets": [{ "refId": "A", "expr": "sum by (dependency, operation, status) (rate(tribetalk_dependency_requests_total[1m]))", "legendFormat": "{{dependency}}/{{operation}} · {{status}}" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 2, "fillOpacity": 10, "drawStyle": "line", "showPoints": "never" } }, "overrides": [] }, "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 13, "type": "timeseries", "title": "Dependency latency p95", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
+      "targets": [{ "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, dependency, operation) (rate(tribetalk_dependency_duration_seconds_bucket[5m])))", "legendFormat": "{{dependency}}/{{operation}}" }],
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3, "custom": { "lineWidth": 2, "fillOpacity": 10, "drawStyle": "line", "showPoints": "never" } }, "overrides": [] }, "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 14, "type": "timeseries", "title": "Redis cache hit ratio", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 31 },
+      "targets": [{ "refId": "A", "expr": "sum(rate(tribetalk_cache_hits_total[5m])) / clamp_min(sum(rate(tribetalk_cache_hits_total[5m])) + sum(rate(tribetalk_cache_misses_total[5m])), 1)", "legendFormat": "hit ratio" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "decimals": 3, "custom": { "lineWidth": 2, "fillOpacity": 10, "drawStyle": "line", "showPoints": "never" } }, "overrides": [] }, "options": { "legend": { "displayMode": "table", "placement": "bottom" } }
+    },
+    {
+      "id": 15, "type": "timeseries", "title": "MongoDB operations", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 31 },
+      "targets": [{ "refId": "A", "expr": "rate(mongodb_op_counters_total[1m])", "legendFormat": "{{type}}" }],
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "lineWidth": 2, "fillOpacity": 10, "drawStyle": "line", "showPoints": "never" } }, "overrides": [] }, "options": { "legend": { "displayMode": "table", "placement": "bottom" } }
+    },
+    {
+      "id": 16, "type": "timeseries", "title": "Elasticsearch indexed documents", "datasource": "Prometheus", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 31 },
+      "targets": [{ "refId": "A", "expr": "elasticsearch_indices_docs", "legendFormat": "{{name}}" }],
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "custom": { "lineWidth": 2, "fillOpacity": 10, "drawStyle": "line", "showPoints": "never" } }, "overrides": [] }, "options": { "legend": { "displayMode": "table", "placement": "bottom" } }
+    },
+    { "id": 17, "type": "row", "title": "Logs", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 }, "collapsed": false, "panels": [] },
+    {
+      "id": 18, "type": "logs", "title": "Backend live logs · Loki", "description": "Backend stdout collected by Promtail and stored in Loki.", "datasource": "Loki", "gridPos": { "h": 12, "w": 24, "x": 0, "y": 40 },
+      "targets": [{ "refId": "A", "expr": "{job=\"docker\",service=~\"backend-1|backend-2\"}" }],
+      "options": { "showTime": true, "showLabels": true, "showCommonLabels": false, "wrapLines": true, "prettifyLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "deduplication": "exact" }
+    },
+    {
+      "id": 19, "type": "logs", "title": "All local container logs · Loki", "description": "Use this when diagnosing Nginx, Promtail, database, or exporter issues.", "datasource": "Loki", "gridPos": { "h": 10, "w": 24, "x": 0, "y": 52 },
+      "targets": [{ "refId": "A", "expr": "{job=\"docker\"}" }],
+      "options": { "showTime": true, "showLabels": true, "showCommonLabels": false, "wrapLines": true, "prettifyLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "deduplication": "exact" }
+    }
   ]
 }

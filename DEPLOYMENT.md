@@ -96,6 +96,91 @@ npm run dev
 
 The frontend `.env` defaults point to `http://localhost:3000`; Docker overrides them with same-origin proxy paths at build time.
 
+## Friend-laptop backend and observability demo
+
+This setup keeps the frontend on Vercel and runs the backend plus its data and observability services on another laptop. It is a demo/test environment, not a production deployment.
+
+The laptop runs two backend replicas, MongoDB, Redis, Elasticsearch, Nginx, Prometheus, Grafana, Loki, Promtail, and the exporters. The frontend container is disabled. Nginx exposes:
+
+- `/api/` and `/socket.io/` for the Vercel frontend
+- `/grafana/` for Grafana
+- `/prometheus/` for Prometheus
+- `/loki/` for Loki's HTTP API
+
+### One-time domain setup
+
+1. Put `rajdeep.app` on Cloudflare DNS. If the domain is registered elsewhere, change its nameservers to the Cloudflare nameservers first.
+2. In Cloudflare Zero Trust, create a Tunnel and copy its tunnel token.
+3. Add a public hostname for the tunnel:
+   - Recommended: `backend-tribetalk.rajdeep.app` (use a hyphen; underscores are not valid normal hostnames).
+   - Service: `http://gateway:80`.
+4. Keep `tribetalk.rajdeep.app` pointed to the Vercel project.
+
+### Vercel frontend
+
+1. Import the GitHub repository into Vercel.
+2. Set the project root directory to `TribeTalkFrontend`.
+3. Use the Vite build settings:
+   - Build command: `npm run build`
+   - Output directory: `dist`
+4. Add these Vercel environment variables for Production:
+
+   ```text
+   VITE_API_URL=https://backend-tribetalk.rajdeep.app/api/v1
+   VITE_SOCKET_URL=https://backend-tribetalk.rajdeep.app
+   ```
+
+5. Add `tribetalk.rajdeep.app` as a Vercel custom domain and configure the DNS record Vercel provides.
+6. The setup script asks for this Vercel URL and configures backend CORS and secure cookies accordingly.
+
+### Friend's laptop
+
+1. Install Docker Desktop and enable the Linux engine.
+2. Clone the repository.
+3. Open PowerShell in the repository root and run:
+
+   ```powershell
+   .\deploy\friend-demo\setup-friend-demo.ps1
+   ```
+
+4. Enter:
+   - Vercel URL: `https://tribetalk.rajdeep.app`
+   - Public backend URL: `https://backend-tribetalk.rajdeep.app`
+   - Cloudflare Tunnel token
+   - A Grafana admin password
+
+The script creates a private backend `.env` if one does not exist, generates JWT/metrics/admin secrets, generates the Prometheus config with the correct metrics token, builds the constrained stack, and starts the tunnel.
+
+For a Linux VM inside VirtualBox, use the Bash version instead:
+
+```bash
+chmod +x deploy/friend-demo/setup-friend-demo.sh
+./deploy/friend-demo/setup-friend-demo.sh
+```
+
+The Linux VM needs Docker Engine, Docker Compose v2, OpenSSL, and Git. Docker should run inside the VM, not through a Windows Docker Desktop socket. With Cloudflare Tunnel enabled, the VM does not need inbound port forwarding; the tunnel makes an outbound connection to Cloudflare and routes traffic to the internal `gateway` container.
+
+VirtualBox NAT is sufficient for the tunneled setup. Use bridged networking only if you want other devices on the same LAN to reach the VM directly. If the tunnel is disabled and the Windows host must open the local gateway, add a VirtualBox NAT rule from host port `8080` to guest port `8080`.
+
+The resulting URLs are:
+
+```text
+Frontend:    https://tribetalk.rajdeep.app
+Health:      https://backend-tribetalk.rajdeep.app/api/health
+Swagger:     https://backend-tribetalk.rajdeep.app/api/docs
+Grafana:     https://backend-tribetalk.rajdeep.app/grafana/
+Prometheus:  https://backend-tribetalk.rajdeep.app/prometheus/
+Loki API:    https://backend-tribetalk.rajdeep.app/loki/
+```
+
+Grafana login is `admin` plus the password entered by the friend. MongoDB, Redis, Elasticsearch, and the Docker socket are not exposed publicly. To stop the demo:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.local-scale.yml -f docker-compose.friend-demo.yml --profile observability --profile tunnel down
+```
+
+To inspect it locally without a tunnel, leave the token blank in the setup script and open `http://localhost:8080`, `http://localhost:8080/grafana/`, or `http://localhost:8080/prometheus/` on the laptop.
+
 ## API safeguards
 
 - Helmet adds browser-facing security headers.

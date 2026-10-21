@@ -10,6 +10,7 @@ import { createMessageNotifications } from "../../Service/Notification.service.j
 import { metrics } from "../../config/metrics.js";
 import * as directMessageService from "../../Service/DirectMessage.service.js";
 import { assertMessageNotSpam } from "../../Service/Spam.service.js";
+import { indexMessage } from "../../Service/Search.service.js";
 
 const attachmentSchema = z.object({
     url: z.string().url(),
@@ -32,6 +33,8 @@ const sendMessageSchema = z.object({
 
 export default function registerMessageHandlers(io, socket) {
     socket.on("send_message", async (payload, acknowledge) => {
+        const startedAt = process.hrtime.bigint();
+        metrics.messageDeliveryAttempt();
         const parsedPayload = sendMessageSchema.safeParse(payload);
         const clientId = parsedPayload.success ? parsedPayload.data.clientId : payload?.clientId;
         try {
@@ -53,6 +56,7 @@ export default function registerMessageHandlers(io, socket) {
                 attachments,
                 replyTo,
             });
+            if (savedMessage._wasDuplicate) metrics.duplicateMessage();
 
             const messageWithUser = {
                 ...(savedMessage.toObject ? savedMessage.toObject() : savedMessage),
@@ -68,7 +72,18 @@ export default function registerMessageHandlers(io, socket) {
 
             // The sender receives its clientId as an acknowledgement; peers do not.
             socket.emit("new_message", messageDTO);
+            metrics.messageDeliveryResult("sent");
+            metrics.observeMessageAck(Number(process.hrtime.bigint() - startedAt) / 1_000_000);
             if (typeof acknowledge === "function") acknowledge({ ok: true, message: messageDTO });
+
+            // Elasticsearch is deliberately outside the acknowledgement path.
+            // MongoDB is the durable source of truth; indexing is recovered by
+            // the outbox worker and must never delay a successful send.
+            setImmediate(() => {
+                indexMessage(savedMessage).catch((error) => {
+                    console.error("Failed to enqueue message search indexing:", error.message);
+                });
+            });
 
             socket.to(channelId).emit("new_message", {
                 ...messageDTO,
@@ -94,6 +109,8 @@ export default function registerMessageHandlers(io, socket) {
                 clientId,
                 channelId: parsedPayload.success ? parsedPayload.data.channelId : undefined,
             });
+            metrics.messageDeliveryResult("failed");
+            metrics.observeMessageAck(Number(process.hrtime.bigint() - startedAt) / 1_000_000);
             if (typeof acknowledge === "function") acknowledge({ ok: false, error: error?.message || "Failed to send message" });
         }
     });

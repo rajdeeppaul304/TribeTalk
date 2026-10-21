@@ -113,6 +113,12 @@ export const getPublicProfile = async (userId) => {
     return profile;
 };
 
+export const searchUsers = async (query, limit) => {
+    const users = await userRepo.searchPublicUsers(query.trim(), limit);
+    const presence = await getUsersPresence(users.map((user) => user._id));
+    return users.map((user) => ({ ...user, displayName: user.displayName || user.username, online: Boolean(presence[user._id.toString()]) }));
+};
+
 export const refreshAccessToken = async (incomingRefreshToken, context = {}) => {
     if (!incomingRefreshToken) throw new ApiError(401, "Unauthorized request: Token missing");
     let decodedToken;

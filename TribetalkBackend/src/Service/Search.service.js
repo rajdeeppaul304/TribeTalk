@@ -69,10 +69,15 @@ export const searchMessages = async (userId, query, limit, filters = {}) => {
   const result = await trackDependency("elasticsearch", "search", () => getElasticsearchClient().search({
     index: MESSAGE_INDEX,
     size: limit,
+    track_total_hits: false,
+    _source: ["messageId", "channelId", "senderId", "senderUsername", "content", "createdAt", "hasAttachments"],
     query: {
       bool: {
         filter,
-        must: [{ simple_query_string: { query, fields: ["content^3", "senderUsername"], default_operator: "and" } }],
+        // Message search is intentionally scoped to the analyzed content field.
+        // User search has its own endpoint, so searching keyword usernames here
+        // only added scoring work to every message query.
+        must: [{ match: { content: { query, operator: "and" } } }],
       },
     },
     highlight: { fields: { content: {} }, pre_tags: ["<mark>"], post_tags: ["</mark>"] },

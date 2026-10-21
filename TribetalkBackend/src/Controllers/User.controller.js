@@ -150,6 +150,11 @@ export const getPublicUserProfile = asyncHandler(async (req, res) => {
     );
 });
 
+export const searchPublicUsers = asyncHandler(async (req, res) => {
+    const users = await userService.searchUsers(req.query.q, req.query.limit);
+    return res.status(200).json(new ApiResponse(200, users, "Users fetched successfully"));
+});
+
 export const getNotifications = asyncHandler(async (req, res) => {
     const notifications = await notificationService.listNotifications(req.user._id);
     return res.json(new ApiResponse(200, notifications, "Notifications retrieved"));

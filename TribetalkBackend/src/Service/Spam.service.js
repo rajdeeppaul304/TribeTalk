@@ -1,11 +1,13 @@
 import { getRedisClient, isRedisReady } from "../config/redis.js";
 import { ApiError } from "../Utils/ApiError.js";
+import { env } from "../config/env.js";
 
 const localCounters = new Map();
 const WINDOW_SECONDS = 10;
 const MAX_MESSAGES = 8;
 
 export const assertMessageNotSpam = async ({ userId, channelId, content }) => {
+  if (env.NODE_ENV === "development" && env.LOAD_TEST_MODE) return true;
   const rateKey = `spam:rate:${userId}:${channelId}`;
   if (isRedisReady() && getRedisClient()) {
     const redis = getRedisClient();

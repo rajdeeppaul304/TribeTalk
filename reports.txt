@@ -1,0 +1,4 @@
+This report has moved to [reports.md](reports.md).
+
+The Markdown report contains the current benchmark results, Docker constraints,
+reproduction commands, and resume-safe wording. It supersedes this text file.

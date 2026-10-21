@@ -7,7 +7,7 @@ import {
     getCurrentUser,
     updateCurrentUserProfile,
     getPublicUserProfile, getNotifications, markNotificationsRead
-    , requestEmailVerification, verifyEmail, requestPasswordReset, resetPassword, logoutAllSessions
+    , requestEmailVerification, verifyEmail, requestPasswordReset, resetPassword, logoutAllSessions, searchPublicUsers
 } from "../Controllers/User.controller.js";
 import { verifyJWT } from "../Middlewares/Auth.middleware.js";
 import { validate } from "../Middlewares/Validate.middleware.js";
@@ -29,6 +29,7 @@ router.route("/password-reset/confirm").post(authLimiter, validate(resetPassword
 router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/logout-all").post(verifyJWT, logoutAllSessions);
 router.route("/current-user").get(verifyJWT, getCurrentUser);
+router.route("/search").get(verifyJWT, searchPublicUsers);
 router.route("/profile").patch(verifyJWT, validate(updateProfileSchema), updateCurrentUserProfile);
 router.route("/notifications").get(verifyJWT, getNotifications).patch(verifyJWT, markNotificationsRead);
 router.route("/:userId/profile").get(verifyJWT, validate(publicProfileParamsSchema), getPublicUserProfile);

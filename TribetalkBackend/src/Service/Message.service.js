@@ -57,8 +57,6 @@ export const addMessage = async ({ content, channelId, UserId, clientId = null, 
   }
 
   await savedMessage.populate("sender", "username displayName avatar");
-  void indexMessage(savedMessage);
-
   return savedMessage;
 };
 

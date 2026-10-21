@@ -1,13 +1,15 @@
 import { z } from "zod";
+import { createSchemas } from "../../../shared/schemas.js";
+const sharedSchemas = createSchemas(z);
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Must be a valid MongoDB ID");
 const optionalDescription = z.string().trim().max(200).optional();
 
 export const registerSchema = z.object({
   body: z.object({
-    username: z.string().trim().min(3).max(30),
-    email: z.string().trim().email().max(254),
-    password: z.string().min(8).max(72),
+    username: sharedSchemas.register.shape.username,
+    email: sharedSchemas.register.shape.email,
+    password: sharedSchemas.register.shape.password.max(72),
   }),
   params: z.object({}),
   query: z.object({}),
@@ -15,8 +17,8 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   body: z.object({
-    email: z.string().trim().email().max(254),
-    password: z.string().min(1).max(72),
+    email: sharedSchemas.login.shape.email,
+    password: sharedSchemas.login.shape.password.max(72),
   }),
   params: z.object({}),
   query: z.object({}),
@@ -36,9 +38,9 @@ export const resetPasswordSchema = z.object({ body: otpBody.extend({ password: z
 
 export const updateProfileSchema = z.object({
   body: z.object({
-    displayName: z.string().trim().min(1).max(50).optional(),
+    displayName: sharedSchemas.profile.shape.displayName.optional(),
     avatar: z.union([z.string().url().max(2048), z.literal("")]).optional(),
-    bio: z.string().trim().max(300).optional(),
+    bio: sharedSchemas.profile.shape.bio.trim().optional(),
     notificationPreferences: z.object({ browser: z.boolean().optional(), mentions: z.boolean().optional(), unread: z.boolean().optional() }).optional(),
   }).refine((body) => Object.keys(body).length > 0, "Provide at least one field to update"),
   params: z.object({}),

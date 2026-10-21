@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getRedisClient, isRedisReady } from "../config/redis.js";
 import { metrics } from "../config/metrics.js";
+import { env } from "../config/env.js";
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i);
 const schemas = {
@@ -47,7 +48,8 @@ export const socketEventMiddleware = (socket) => async ([event, payload], next) 
     // the shared per-user event bucket makes multiple tabs/reconnects fight
     // each other (and surface a noisy error to the UI). Keep payload
     // validation above, but let the presence handler refresh its short TTL.
-    if (event !== "presence_heartbeat" && !(await isWithinLimit(socket.user._id.toString(), event))) {
+    const loadTestBypass = env.NODE_ENV === "development" && env.LOAD_TEST_MODE && env.LOAD_TEST_KEY && socket.handshake.auth?.loadTestKey === env.LOAD_TEST_KEY;
+    if (!loadTestBypass && event !== "presence_heartbeat" && !(await isWithinLimit(socket.user._id.toString(), event))) {
       return next(new Error(`Socket event rate limit exceeded: ${event}`));
     }
     next();

@@ -5,5 +5,10 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["./test/setup.js"],
     exclude: ["e2e/**", "node_modules/**", "dist/**"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html", "json-summary"],
+      exclude: ["src/index.js", "src/config/**", "**/*.config.js"],
+    },
   },
 });

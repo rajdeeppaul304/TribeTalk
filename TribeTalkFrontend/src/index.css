@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+
+:focus-visible { outline: 2px solid #a8dadc; outline-offset: 2px; }
 :root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #F1F5F4; background: #111315; }
 * { box-sizing: border-box; }
 html, body, #root { min-width: 320px; min-height: 100%; margin: 0; }

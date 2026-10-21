@@ -46,13 +46,18 @@ const typingKey = (channelId, userId) => `typing:${channelId}:${userId}`;
 
 export const markSocketOnline = async (userId, socketId) => {
   if (!redisReady || !redisClient) return false;
-  const wasOnline = await redisClient.exists(presenceUserKey(userId));
-  await redisClient.multi()
-    .sAdd(presenceUserKey(userId), socketId)
-    .expire(presenceUserKey(userId), PRESENCE_TTL_SECONDS)
-    .set(presenceSocketKey(socketId), userId, { EX: PRESENCE_TTL_SECONDS })
-    .exec();
-  return !wasOnline;
+  try {
+    const wasOnline = await redisClient.exists(presenceUserKey(userId));
+    await redisClient.multi()
+      .sAdd(presenceUserKey(userId), socketId)
+      .expire(presenceUserKey(userId), PRESENCE_TTL_SECONDS)
+      .set(presenceSocketKey(socketId), userId, { EX: PRESENCE_TTL_SECONDS })
+      .exec();
+    return !wasOnline;
+  } catch (error) {
+    console.warn("Redis presence online update failed:", error.message);
+    return false;
+  }
 };
 
 export const refreshSocketPresence = async (userId, socketId) => {
@@ -61,26 +66,35 @@ export const refreshSocketPresence = async (userId, socketId) => {
 
 export const markSocketOffline = async (userId, socketId) => {
   if (!redisReady || !redisClient) return false;
-  await redisClient.multi()
-    .sRem(presenceUserKey(userId), socketId)
-    .del(presenceSocketKey(socketId))
-    .exec();
+  try {
+    await redisClient.multi()
+      .sRem(presenceUserKey(userId), socketId)
+      .del(presenceSocketKey(socketId))
+      .exec();
 
-  if (await redisClient.sCard(presenceUserKey(userId)) === 0) {
-    await redisClient.del(presenceUserKey(userId));
-    return true;
+    if (await redisClient.sCard(presenceUserKey(userId)) === 0) {
+      await redisClient.del(presenceUserKey(userId));
+      return true;
+    }
+  } catch (error) {
+    console.warn("Redis presence offline update failed:", error.message);
   }
   return false;
 };
 
 export const getUsersPresence = async (userIds) => {
   if (!redisReady || !redisClient || userIds.length === 0) return Object.fromEntries(userIds.map((id) => [id.toString(), false]));
-  const values = await Promise.all(userIds.map((id) => redisClient.exists(presenceUserKey(id))));
-  return Object.fromEntries(userIds.map((id, index) => [id.toString(), Boolean(values[index])]));
+  try {
+    const values = await Promise.all(userIds.map((id) => redisClient.exists(presenceUserKey(id))));
+    return Object.fromEntries(userIds.map((id, index) => [id.toString(), Boolean(values[index])]));
+  } catch (error) {
+    console.warn("Redis presence read failed:", error.message);
+    return Object.fromEntries(userIds.map((id) => [id.toString(), false]));
+  }
 };
 export const markTyping = async (channelId, userId) => {
-  if (redisReady && redisClient) await redisClient.set(typingKey(channelId, userId), "1", { EX: 5 });
+  if (redisReady && redisClient) await redisClient.set(typingKey(channelId, userId), "1", { EX: 5 }).catch((error) => console.warn("Redis typing update failed:", error.message));
 };
 export const clearTyping = async (channelId, userId) => {
-  if (redisReady && redisClient) await redisClient.del(typingKey(channelId, userId));
+  if (redisReady && redisClient) await redisClient.del(typingKey(channelId, userId)).catch((error) => console.warn("Redis typing cleanup failed:", error.message));
 };

@@ -10,6 +10,13 @@ describe("application baseline", () => {
     expect(response.body).toMatchObject({ status: "ok" });
   });
 
+  it("exposes the Socket.IO contract alongside the Swagger UI", async () => {
+    const response = await request(app).get("/api/docs/socket-events");
+    expect(response.status).toBe(200);
+    expect(response.body.connection).toMatchObject({ path: "/socket.io" });
+    expect(response.body.events.clientToServer).toHaveProperty("send_message");
+  });
+
   it("returns the standard JSON shape for unknown routes", async () => {
     const response = await request(app).get("/api/v1/not-a-route");
 

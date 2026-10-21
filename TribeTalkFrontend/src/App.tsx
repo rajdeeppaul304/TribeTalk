@@ -1,6 +1,7 @@
-import { Routes, Route, Navigate } from "react-router-dom"
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "./features/auth/useAuth"
 import { useEffect } from "react"
+import { Sentry } from "./observability/sentry"
 import { useDispatch } from "react-redux"
 import type { AppDispatch } from "./app/store"
 import { initializeMessageSync, cleanupMessageSync } from "./features/messages/socketMessageSync"
@@ -26,6 +27,24 @@ function App() {
   const dispatch = useDispatch<AppDispatch>()
   const { token, isAuthenticated } = useAuth()
   const isLoggedIn = Boolean(isAuthenticated && token)
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const span = Sentry.startInactiveSpan({ name: `Route ${location.pathname}`, op: "navigation" })
+    return () => span?.end()
+  }, [location.pathname])
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "/" && !(event.target instanceof HTMLInputElement) && !(event.target instanceof HTMLTextAreaElement)) {
+        event.preventDefault(); navigate("/search")
+      }
+      if (event.key === "Escape" && document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [navigate])
 
   useEffect(() => {
     if (isAuthenticated && token) {
