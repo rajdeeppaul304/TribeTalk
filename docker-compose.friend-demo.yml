@@ -46,6 +46,8 @@ services:
       - --web.route-prefix=/prometheus/
 
   grafana:
+    volumes:
+      - ./deploy/friend-demo/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
     environment:
       GF_SERVER_ROOT_URL: ${BACKEND_ORIGIN:-http://localhost:8080}/grafana/
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
