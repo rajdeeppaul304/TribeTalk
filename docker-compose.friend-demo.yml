@@ -1,4 +1,10 @@
 services:
+  # MongoDB 8 currently refuses to start on Linux kernels 6.19+.
+  # The friend-demo VM uses MongoDB 7 for compatibility; production can
+  # continue using the base compose version when its kernel is supported.
+  mongo:
+    image: mongo:7.0
+
   # The frontend is hosted by Vercel for this setup.
   frontend:
     profiles: [frontend-disabled]

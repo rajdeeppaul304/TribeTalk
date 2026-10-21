@@ -10,12 +10,20 @@ echo "This starts the backend replicas, data services, observability stack, and 
 command -v docker >/dev/null || { echo "Docker is required." >&2; exit 1; }
 docker compose version >/dev/null || { echo "Docker Compose v2 is required." >&2; exit 1; }
 command -v openssl >/dev/null || { echo "OpenSSL is required." >&2; exit 1; }
+if ! docker info >/dev/null 2>&1; then
+  echo "Docker is installed, but this user cannot access the Docker socket." >&2
+  echo "Run: sudo usermod -aG docker \$USER, then log out and back in (or run newgrp docker)." >&2
+  exit 1
+fi
 
 read -r -p "Vercel frontend URL (for example https://tribetalk.rajdeep.app): " FRONTEND_ORIGIN
 read -r -p "Public backend URL (for example https://backend-tribetalk.rajdeep.app): " BACKEND_ORIGIN
 read -r -p "Cloudflare Tunnel token (leave blank for local-only mode): " CLOUDFLARE_TUNNEL_TOKEN
 read -r -s -p "Grafana admin password: " GRAFANA_ADMIN_PASSWORD
 echo
+
+FRONTEND_ORIGIN="${FRONTEND_ORIGIN%/}"
+BACKEND_ORIGIN="${BACKEND_ORIGIN%/}"
 
 [[ -n "$FRONTEND_ORIGIN" && -n "$BACKEND_ORIGIN" ]] || { echo "Both public URLs are required." >&2; exit 1; }
 [[ -n "$GRAFANA_ADMIN_PASSWORD" ]] || { echo "Grafana password is required." >&2; exit 1; }
