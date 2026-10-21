@@ -11,7 +11,12 @@ class SocketGateway {
     this.clearPresenceHeartbeat()
     this.socket?.disconnect()
     this.socket = io(env.socketUrl, {
-      auth: { token }
+      auth: { token },
+      // Avoid Engine.IO polling session affinity requirements behind the
+      // round-robin Nginx gateway. Cloudflare and Nginx both forward WebSocket
+      // upgrades, while the Redis adapter handles cross-replica events.
+      transports: ["websocket"],
+      upgrade: false,
     })
     this.socket.on("connect", () => {
       this.clearPresenceHeartbeat()
