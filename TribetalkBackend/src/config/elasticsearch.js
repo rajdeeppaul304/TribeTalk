@@ -23,20 +23,29 @@ export const initializeElasticsearch = async () => {
     await elasticsearchClient.ping();
     const exists = await elasticsearchClient.indices.exists({ index: MESSAGE_INDEX });
     if (!exists) {
-      await elasticsearchClient.indices.create({
-        index: MESSAGE_INDEX,
-        mappings: {
-          properties: {
-            messageId: { type: "keyword" },
-            channelId: { type: "keyword" },
-            senderId: { type: "keyword" },
-            senderUsername: { type: "keyword" },
-            content: { type: "text", analyzer: "standard" },
-            createdAt: { type: "date" },
+      try {
+        await elasticsearchClient.indices.create({
+          index: MESSAGE_INDEX,
+          mappings: {
+            properties: {
+              messageId: { type: "keyword" },
+              channelId: { type: "keyword" },
+              senderId: { type: "keyword" },
+              senderUsername: { type: "keyword" },
+              content: { type: "text", analyzer: "standard" },
+              createdAt: { type: "date" },
+            },
           },
-        },
-      });
-      messageIndexCreated = true;
+        });
+        messageIndexCreated = true;
+      } catch (createError) {
+        // Both backend replicas may observe a missing index at the same time.
+        // If the other replica creates it first, that is a successful startup,
+        // not an Elasticsearch outage.
+        const errorType = createError.meta?.body?.error?.type;
+        const statusCode = createError.meta?.statusCode;
+        if (statusCode !== 400 || errorType !== "resource_already_exists_exception") throw createError;
+      }
     }
     elasticsearchReady = true;
     console.log("✅ Elasticsearch connected");
