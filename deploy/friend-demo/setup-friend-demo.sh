@@ -7,6 +7,19 @@ cd "$ROOT_DIR"
 echo "TribeTalk friend demo setup"
 echo "This starts the backend replicas, data services, observability stack, and Nginx gateway."
 
+FRIEND_DEMO_ENV="$ROOT_DIR/.env.friend-demo"
+if [[ -f "$FRIEND_DEMO_ENV" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$FRIEND_DEMO_ENV"
+  set +a
+fi
+# The recommended friend-demo setup runs cloudflared as a host service.
+# Only enable the Docker connector explicitly when requested.
+if [[ "${FRIEND_DEMO_USE_DOCKER_TUNNEL:-0}" != "1" ]]; then
+  CLOUDFLARE_TUNNEL_TOKEN=""
+fi
+
 command -v docker >/dev/null || { echo "Docker is required." >&2; exit 1; }
 docker compose version >/dev/null || { echo "Docker Compose v2 is required." >&2; exit 1; }
 command -v openssl >/dev/null || { echo "OpenSSL is required." >&2; exit 1; }
@@ -16,17 +29,33 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-read -r -p "Vercel frontend URL (for example https://tribetalk.rajdeep.app): " FRONTEND_ORIGIN
-read -r -p "Public backend URL (for example https://backend-tribetalk.rajdeep.app): " BACKEND_ORIGIN
-read -r -p "Cloudflare Tunnel token (leave blank for local-only mode): " CLOUDFLARE_TUNNEL_TOKEN
-read -r -s -p "Grafana admin password: " GRAFANA_ADMIN_PASSWORD
-echo
+if [[ "${FRIEND_DEMO_RECONFIGURE:-0}" == "1" || -z "${FRONTEND_ORIGIN:-}" ]]; then
+  read -r -p "Vercel frontend URL (for example https://tribetalk.rajdeep.app): " FRONTEND_ORIGIN
+fi
+if [[ "${FRIEND_DEMO_RECONFIGURE:-0}" == "1" || -z "${BACKEND_ORIGIN:-}" ]]; then
+  read -r -p "Public backend URL (for example https://backend-tribetalk.rajdeep.app): " BACKEND_ORIGIN
+fi
+if [[ "${FRIEND_DEMO_RECONFIGURE:-0}" == "1" || -z "${GRAFANA_ADMIN_PASSWORD:-}" ]]; then
+  read -r -s -p "Grafana admin password: " GRAFANA_ADMIN_PASSWORD
+  echo
+fi
+if [[ "${FRIEND_DEMO_USE_DOCKER_TUNNEL:-0}" == "1" && ( "${FRIEND_DEMO_RECONFIGURE:-0}" == "1" || -z "${CLOUDFLARE_TUNNEL_TOKEN:-}" ) ]]; then
+  read -r -p "Cloudflare Tunnel token: " CLOUDFLARE_TUNNEL_TOKEN
+fi
 
 FRONTEND_ORIGIN="${FRONTEND_ORIGIN%/}"
 BACKEND_ORIGIN="${BACKEND_ORIGIN%/}"
 
 [[ -n "$FRONTEND_ORIGIN" && -n "$BACKEND_ORIGIN" ]] || { echo "Both public URLs are required." >&2; exit 1; }
 [[ -n "$GRAFANA_ADMIN_PASSWORD" ]] || { echo "Grafana password is required." >&2; exit 1; }
+
+{
+  printf 'FRONTEND_ORIGIN=%q\n' "$FRONTEND_ORIGIN"
+  printf 'BACKEND_ORIGIN=%q\n' "$BACKEND_ORIGIN"
+  printf 'GRAFANA_ADMIN_PASSWORD=%q\n' "$GRAFANA_ADMIN_PASSWORD"
+  printf 'CLOUDFLARE_TUNNEL_TOKEN=%q\n' "${CLOUDFLARE_TUNNEL_TOKEN:-}"
+} > "$FRIEND_DEMO_ENV"
+chmod 600 "$FRIEND_DEMO_ENV"
 
 BACKEND_ENV="$ROOT_DIR/TribetalkBackend/.env"
 BACKEND_TEMPLATE="$ROOT_DIR/TribetalkBackend/.env.example"

@@ -10,3 +10,4 @@ readers/
 readers/*.md
 .generated/
 tools/.generated/
+.env.friend-demo
