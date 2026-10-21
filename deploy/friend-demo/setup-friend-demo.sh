@@ -14,11 +14,6 @@ if [[ -f "$FRIEND_DEMO_ENV" ]]; then
   source "$FRIEND_DEMO_ENV"
   set +a
 fi
-# The recommended friend-demo setup runs cloudflared as a host service.
-# Only enable the Docker connector explicitly when requested.
-if [[ "${FRIEND_DEMO_USE_DOCKER_TUNNEL:-0}" != "1" ]]; then
-  CLOUDFLARE_TUNNEL_TOKEN=""
-fi
 
 command -v docker >/dev/null || { echo "Docker is required." >&2; exit 1; }
 docker compose version >/dev/null || { echo "Docker Compose v2 is required." >&2; exit 1; }
@@ -39,9 +34,6 @@ if [[ "${FRIEND_DEMO_RECONFIGURE:-0}" == "1" || -z "${GRAFANA_ADMIN_PASSWORD:-}"
   read -r -s -p "Grafana admin password: " GRAFANA_ADMIN_PASSWORD
   echo
 fi
-if [[ "${FRIEND_DEMO_USE_DOCKER_TUNNEL:-0}" == "1" && ( "${FRIEND_DEMO_RECONFIGURE:-0}" == "1" || -z "${CLOUDFLARE_TUNNEL_TOKEN:-}" ) ]]; then
-  read -r -p "Cloudflare Tunnel token: " CLOUDFLARE_TUNNEL_TOKEN
-fi
 
 FRONTEND_ORIGIN="${FRONTEND_ORIGIN%/}"
 BACKEND_ORIGIN="${BACKEND_ORIGIN%/}"
@@ -53,7 +45,6 @@ BACKEND_ORIGIN="${BACKEND_ORIGIN%/}"
   printf 'FRONTEND_ORIGIN=%q\n' "$FRONTEND_ORIGIN"
   printf 'BACKEND_ORIGIN=%q\n' "$BACKEND_ORIGIN"
   printf 'GRAFANA_ADMIN_PASSWORD=%q\n' "$GRAFANA_ADMIN_PASSWORD"
-  printf 'CLOUDFLARE_TUNNEL_TOKEN=%q\n' "${CLOUDFLARE_TUNNEL_TOKEN:-}"
 } > "$FRIEND_DEMO_ENV"
 chmod 600 "$FRIEND_DEMO_ENV"
 
@@ -88,14 +79,10 @@ PROM_TEMPLATE="$ROOT_DIR/deploy/friend-demo/prometheus.template.yml"
 PROM_GENERATED="$ROOT_DIR/deploy/friend-demo/prometheus.generated.yml"
 sed "s/__METRICS_TOKEN__/${METRICS_TOKEN}/g" "$PROM_TEMPLATE" > "$PROM_GENERATED"
 
-export FRONTEND_ORIGIN BACKEND_ORIGIN GRAFANA_ADMIN_PASSWORD CLOUDFLARE_TUNNEL_TOKEN
+export FRONTEND_ORIGIN BACKEND_ORIGIN GRAFANA_ADMIN_PASSWORD
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.local-scale.yml -f docker-compose.friend-demo.yml)
 
-if [[ -z "$CLOUDFLARE_TUNNEL_TOKEN" ]]; then
-  docker compose "${COMPOSE_FILES[@]}" --profile observability up -d --build
-else
-  docker compose "${COMPOSE_FILES[@]}" --profile observability --profile tunnel up -d --build
-fi
+docker compose "${COMPOSE_FILES[@]}" --profile observability up -d --build
 
 echo
 echo "TribeTalk demo stack is running."

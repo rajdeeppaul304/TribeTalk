@@ -53,10 +53,3 @@ services:
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me-locally}
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    profiles: [tunnel]
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      gateway: { condition: service_started }
